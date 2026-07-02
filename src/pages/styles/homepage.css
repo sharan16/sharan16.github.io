@@ -262,9 +262,9 @@ body.hx-body::-webkit-scrollbar-thumb {
 }
 .hx-work-row {
 	display: grid;
-	grid-template-columns: 88px minmax(0, 4fr) minmax(0, 5fr) auto;
+	grid-template-columns: 132px minmax(0, 4fr) minmax(0, 5fr);
 	gap: clamp(14px, 2.5vw, 32px);
-	align-items: center;
+	align-items: baseline;
 	padding: 26px 10px 26px 14px;
 	border-bottom: 1px solid var(--hx-line-soft);
 	border-left: 2px solid transparent;
@@ -273,24 +273,6 @@ body.hx-body::-webkit-scrollbar-thumb {
 .hx-work-row:hover {
 	border-left-color: var(--hx-gold);
 	background: var(--hx-plane);
-}
-.hx-work-logo {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 88px;
-	height: 46px;
-	background: #050504;
-	border: 1px solid var(--hx-line-soft);
-}
-.hx-work-logo img {
-	height: 22px;
-	width: auto;
-	max-width: 72px;
-	object-fit: contain;
-	filter: grayscale(1) invert(1) brightness(1.5) contrast(1.05);
-	mix-blend-mode: screen;
-	opacity: 0.9;
 }
 .hx-work-company {
 	display: flex;
@@ -339,18 +321,10 @@ body.hx-body::-webkit-scrollbar-thumb {
 }
 @media (max-width: 880px) {
 	.hx-work-row {
-		grid-template-columns: 1fr auto;
-		grid-template-areas:
-			"logo dur"
-			"main main"
-			"blurb blurb";
-		row-gap: 12px;
+		grid-template-columns: 1fr;
+		row-gap: 10px;
 		padding: 22px 8px;
 	}
-	.hx-work-logo { grid-area: logo; }
-	.hx-work-dur { grid-area: dur; }
-	.hx-work-main { grid-area: main; }
-	.hx-work-blurb { grid-area: blurb; }
 	.hx-work-edu {
 		flex-direction: column;
 		gap: 6px;

@@ -152,8 +152,8 @@ const Homepage = () => {
 							SOFTWARE ENGINEER · DATADOG, NEW YORK
 						</p>
 						<h1 className="hx-display">
-							Building the systems that hold the{" "}
-							<em>world's&nbsp;metrics.</em>
+							Storage systems by day, everything else{" "}
+							<em>after&nbsp;hours.</em>
 						</h1>
 						<p className="hx-hero-sub">
 							Distributed storage — ingest, index, retrieve.
@@ -202,12 +202,7 @@ const Homepage = () => {
 								target="_blank"
 								rel="noreferrer"
 							>
-								<span className="hx-work-logo">
-									<img
-										src={process.env.PUBLIC_URL + "/" + w.logo}
-										alt={w.company + " logo"}
-									/>
-								</span>
+								<span className="hx-work-dur">{w.duration}</span>
 								<span className="hx-work-main">
 									<span className="hx-work-company">
 										{w.company}
@@ -218,7 +213,6 @@ const Homepage = () => {
 									<span className="hx-work-role">{w.role}</span>
 								</span>
 								<span className="hx-work-blurb">{w.blurb}</span>
-								<span className="hx-work-dur">{w.duration}</span>
 							</a>
 						))}
 						<div className="hx-work-edu">
