@@ -39,8 +39,30 @@
   }
   .app{max-width:1180px; margin:0 auto}
 
+  /* ---------- top bar & page footer ---------- */
+  .topbar{
+    display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+    padding:4px 0 18px; border-bottom:1px solid var(--hairline);
+    font-size:11px; letter-spacing:.18em;
+  }
+  .topbar a{color:var(--ink2); text-decoration:none; transition:color .18s}
+  .topbar a:hover{color:var(--accent)}
+  .topbar a:focus-visible{outline:1px solid var(--accent); outline-offset:4px}
+  .tb-name{font-weight:500; color:var(--ink) !important}
+  .tb-name:hover{color:var(--accent) !important}
+  .tb-mid{color:var(--muted); letter-spacing:.14em}
+  @media (max-width:760px){ .tb-mid{display:none} }
+  .pagefoot{
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px 24px;
+    margin-top:40px; padding:24px 0 8px; border-top:1px solid var(--hairline);
+    font-size:9.5px; letter-spacing:.18em; color:var(--muted);
+  }
+  .pagefoot a{color:var(--ink2); text-decoration:none; border-bottom:1px solid var(--accent-dim); padding-bottom:2px; transition:color .18s}
+  .pagefoot a:hover{color:var(--accent)}
+  .pagefoot a:focus-visible{outline:1px solid var(--accent); outline-offset:4px}
+
   /* ---------- header ---------- */
-  header{margin:8px 0 34px; border-bottom:1px solid var(--hairline); padding-bottom:26px}
+  header{margin:22px 0 34px; border-bottom:1px solid var(--hairline); padding-bottom:26px}
   .eyebrow{font-size:11px; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:var(--accent)}
   h1{
     font-family:var(--serif); font-size:clamp(38px,5.5vw,60px); font-weight:500;
@@ -222,6 +244,11 @@
 </head>
 <body>
 <div class="app">
+  <div class="topbar">
+    <a class="tb-name" href="https://shansomas.com">SHAN&nbsp;SOMAS</a>
+    <span class="tb-mid">PLATE&nbsp;II&nbsp;—&nbsp;AN&nbsp;INSTRUMENT&nbsp;FROM&nbsp;THE&nbsp;WORKSHOP</span>
+    <a class="tb-back" href="https://shansomas.com">←&nbsp;BACK&nbsp;TO&nbsp;THE&nbsp;INDEX</a>
+  </div>
   <header>
     <div class="eyebrow">Plate II · Ontario — GTA</div>
     <h1>Own <em>or</em> rent?</h1>
@@ -277,13 +304,19 @@
 
       <section class="cards" id="cards"></section>
 
-      <p class="fineprint">A model, not advice. It assumes a steady 25-year amortization (Canadian mortgages
+      <p class="fineprint" id="finePrint">A model, not advice. It assumes a steady 25-year amortization (Canadian mortgages
       compound semi-annually and renew every few years at new rates), smooth average returns with no bad-year
       sequencing, and no income tax on investment gains (a TFSA/RRSP-ish best case — a taxable account would trim
       the rent line, while a principal residence stays tax-free). Rent covers a comparable home. Maintenance
       includes condo fees where they apply.</p>
     </main>
   </div>
+
+  <footer class="pagefoot">
+    <span>©&nbsp;MMXXVI&nbsp;SHAN&nbsp;SOMAS</span>
+    <a href="https://shansomas.com">MADE&nbsp;BY&nbsp;SHAN&nbsp;—&nbsp;SHANSOMAS.COM</a>
+    <span>ONTARIO&nbsp;·&nbsp;GTA</span>
+  </footer>
 </div>
 
 <script>
