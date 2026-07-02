@@ -1,0 +1,829 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Own or Rent — Ontario</title>
+<meta name="description" content="An interactive rent-vs-buy calculator for Ontario and the GTA — see the true economics of buying a home, month by month.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
+<style>
+  :root{
+    --page:#f7f6f3; --card:#fcfcfb; --card2:#f3f2ee;
+    --ink:#1b1b18; --ink2:#52514e; --muted:#898781;
+    --hairline:#e4e3dc; --grid:#e7e6df; --axis:#c3c2b7;
+    --buy:#2a78d6; --rent:#1baf7a;
+    --buy-soft:rgba(42,120,214,.09); --rent-soft:rgba(27,175,122,.10);
+    --good:#006300; --bad:#c03b3b;
+    --ring:rgba(27,27,24,.10);
+    --accent:#2a78d6;
+    --shadow:0 1px 2px rgba(27,27,24,.04), 0 8px 24px rgba(27,27,24,.05);
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --page:#0d0d0d; --card:#1a1a19; --card2:#222220;
+      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --hairline:#2c2c2a; --grid:#262624; --axis:#383835;
+      --buy:#3987e5; --rent:#199e70;
+      --buy-soft:rgba(57,135,229,.14); --rent-soft:rgba(25,158,112,.16);
+      --good:#0ca30c; --bad:#e66767;
+      --ring:rgba(255,255,255,.10);
+      --accent:#3987e5;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--page); color:var(--ink);
+    font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:clamp(16px,3vw,40px) clamp(14px,3vw,32px) 64px;
+  }
+  .app{max-width:1180px; margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{margin:8px 0 28px}
+  .eyebrow{font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
+  h1{font-size:clamp(26px,4vw,34px); font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:4px}
+  .sub{color:var(--ink2); max-width:56ch; margin-top:6px}
+
+  /* ---------- layout ---------- */
+  .layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:24px; align-items:start}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr} }
+
+  /* ---------- control rail ---------- */
+  .rail{display:flex; flex-direction:column; gap:14px; position:sticky; top:16px}
+  @media (max-width:900px){ .rail{position:static} }
+  .group{background:var(--card); border:1px solid var(--ring); border-radius:14px; padding:16px 16px 8px; box-shadow:var(--shadow)}
+  .group h3{font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:12px}
+  .g-sub{font-size:12px; color:var(--ink2); margin:-8px 0 12px}
+  .param{display:block; padding:2px 0 14px}
+  .param-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px}
+  .param-top .name{font-size:13.5px; color:var(--ink2)}
+  .val{
+    font-size:13.5px; font-weight:600; color:var(--ink); background:none; border:none;
+    text-align:right; width:7.5em; border-bottom:1px dashed transparent; border-radius:0; padding:0;
+    font-family:inherit;
+  }
+  .val:hover{border-bottom-color:var(--axis)}
+  .val:focus{outline:none; border-bottom:1px solid var(--accent)}
+  .subnote{font-size:12px; color:var(--muted); margin-top:-8px; padding-bottom:12px}
+  .breakdown{border-top:1px solid var(--hairline); margin:2px -16px 0; padding:10px 16px 12px; font-size:12.5px; color:var(--ink2)}
+  .breakdown .b-title{font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+  .breakdown .b-row{display:flex; justify-content:space-between; gap:8px; padding:2px 0}
+  .breakdown .b-row .n{font-variant-numeric:tabular-nums}
+  .breakdown .b-total{border-top:1px solid var(--hairline); margin-top:5px; padding-top:6px; font-weight:600; color:var(--ink)}
+  .breakdown .b-note{font-size:11.5px; color:var(--muted); margin-top:6px}
+
+  input[type=range]{
+    -webkit-appearance:none; appearance:none; width:100%; height:22px; background:transparent; cursor:pointer; display:block;
+  }
+  input[type=range]::-webkit-slider-runnable-track{
+    height:4px; border-radius:2px;
+    background:linear-gradient(to right, var(--accent) 0 var(--fill,50%), var(--hairline) var(--fill,50%) 100%);
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none; width:18px; height:18px; border-radius:50%; margin-top:-7px;
+    background:#fff; border:1px solid rgba(27,27,24,.18);
+    box-shadow:0 1px 3px rgba(27,27,24,.25);
+  }
+  input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:var(--hairline)}
+  input[type=range]::-moz-range-progress{height:4px; border-radius:2px; background:var(--accent)}
+  input[type=range]::-moz-range-thumb{width:17px; height:17px; border-radius:50%; background:#fff; border:1px solid rgba(27,27,24,.18); box-shadow:0 1px 3px rgba(27,27,24,.25)}
+  input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:4px; border-radius:4px}
+
+  .switch{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 0 14px; cursor:pointer}
+  .switch .name{font-size:13.5px; color:var(--ink2)}
+  .switch input{position:absolute; opacity:0; pointer-events:none}
+  .knob{flex:none; width:36px; height:22px; border-radius:11px; background:var(--hairline); position:relative; transition:background .18s}
+  .knob::after{content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(27,27,24,.3); transition:transform .18s}
+  .switch input:checked + .knob{background:var(--accent)}
+  .switch input:checked + .knob::after{transform:translateX(14px)}
+  .switch input:focus-visible + .knob{outline:2px solid var(--accent); outline-offset:2px}
+
+  /* ---------- main column ---------- */
+  main{display:flex; flex-direction:column; gap:24px; min-width:0}
+
+  /* verdict */
+  .verdict{padding:4px 4px 0}
+  .verdict .line{font-size:clamp(19px,2.6vw,24px); font-weight:600; letter-spacing:-.01em; text-wrap:balance}
+  .verdict .line .figure{font-size:clamp(30px,4.4vw,44px); font-weight:700; letter-spacing:-.025em; margin:0 2px}
+  .keydot{display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 6px 1px 2px}
+  .tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px}
+  @media (max-width:1000px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
+  .tile{background:var(--card); border:1px solid var(--ring); border-radius:14px; padding:14px 16px; box-shadow:var(--shadow)}
+  .tile .t-label{font-size:12.5px; color:var(--muted)}
+  .tile .t-value{font-size:22px; font-weight:600; letter-spacing:-.01em; margin-top:2px}
+  .tile .t-sub{font-size:12px; color:var(--ink2); margin-top:2px}
+  .t-value.pos{color:var(--good)} .t-value.neg{color:var(--bad)}
+
+  /* chart card */
+  .chart-card{background:var(--card); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow); padding:18px 18px 12px; min-width:0}
+  .chart-head{display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px; margin-bottom:6px}
+  .legend{display:flex; gap:16px; align-items:center; font-size:13px; color:var(--ink2)}
+  .lkey{display:inline-block; width:16px; height:0; border-top:2.5px solid; border-radius:2px; margin-right:6px; vertical-align:middle}
+  .spacer{flex:1}
+  .seg{display:inline-flex; background:var(--card2); border:1px solid var(--ring); border-radius:9px; padding:2px}
+  .seg button{
+    border:none; background:none; font:inherit; font-size:12.5px; font-weight:500; color:var(--ink2);
+    padding:4px 10px; border-radius:7px; cursor:pointer;
+  }
+  .seg button[aria-pressed="true"]{background:var(--card); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(27,27,24,.12)}
+  .seg button:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+  .seg-label{font-size:12px; color:var(--muted); margin-right:-8px}
+
+  .chart-wrap{position:relative; touch-action:pan-y}
+  svg{display:block; width:100%; height:auto}
+  .chart-wrap:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:8px}
+  .crosshair{position:absolute; top:0; width:1px; background:var(--axis); pointer-events:none; display:none}
+  .hoverdot{position:absolute; width:11px; height:11px; border-radius:50%; border:2px solid var(--card); pointer-events:none; display:none; transform:translate(-50%,-50%); box-shadow:0 0 0 1px rgba(27,27,24,.06)}
+  .tooltip{
+    position:absolute; pointer-events:none; display:none; z-index:3;
+    background:var(--card); border:1px solid var(--ring); border-radius:10px; box-shadow:var(--shadow);
+    padding:9px 12px; font-size:12.5px; min-width:172px;
+  }
+  .tooltip .tt-when{color:var(--muted); font-size:11.5px; margin-bottom:5px}
+  .tooltip .tt-row{display:flex; align-items:baseline; gap:8px; justify-content:space-between; margin-top:2px}
+  .tooltip .tt-row .v{font-weight:650; font-size:13.5px}
+  .tooltip .tt-name{color:var(--ink2)}
+  .tooltip .tt-delta{margin-top:6px; padding-top:6px; border-top:1px solid var(--hairline); font-weight:600}
+  .chart-caption{font-size:12px; color:var(--muted); margin:8px 2px 4px}
+  details.tableview{margin-top:6px; border-top:1px solid var(--hairline)}
+  details.tableview summary{font-size:12.5px; color:var(--ink2); padding:9px 2px; cursor:pointer; list-style:none}
+  details.tableview summary::before{content:"▸ "; color:var(--muted)}
+  details[open].tableview summary::before{content:"▾ "}
+  details.tableview summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+  .tbl-scroll{overflow-x:auto; padding-bottom:8px}
+  table{border-collapse:collapse; font-size:12.5px; min-width:420px}
+  th,td{text-align:right; padding:5px 14px 5px 0; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--hairline); color:var(--ink2)}
+  th{color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em}
+  th:first-child, td:first-child{text-align:left}
+  td:first-child{color:var(--ink)}
+
+  /* sale panel */
+  .sale{background:var(--card); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow); padding:18px}
+  .sale-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:10px; margin-bottom:14px}
+  .sale-head h2{font-size:16px; font-weight:650; letter-spacing:-.01em}
+  .sale-head .hint{font-size:12px; color:var(--muted)}
+  .sale-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  @media (max-width:760px){ .sale-grid{grid-template-columns:1fr} }
+  .ledger{background:var(--card2); border-radius:12px; padding:14px 16px}
+  .ledger h4{font-size:13px; font-weight:650; margin-bottom:8px; display:flex; align-items:center}
+  .ledger .row{display:flex; justify-content:space-between; gap:12px; font-size:13px; color:var(--ink2); padding:3.5px 0}
+  .ledger .row .n{font-variant-numeric:tabular-nums}
+  .ledger .total{border-top:1px solid var(--hairline); margin-top:7px; padding-top:8px; font-weight:650; color:var(--ink)}
+  .sale-delta{margin-top:12px; font-size:13.5px; color:var(--ink2)}
+  .sale-delta strong{color:var(--ink)}
+
+  /* explainers */
+  .cards{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+  @media (max-width:900px){ .cards{grid-template-columns:1fr} }
+  .card{background:var(--card); border:1px solid var(--ring); border-radius:14px; padding:16px; box-shadow:var(--shadow)}
+  .card h4{font-size:13.5px; font-weight:650; margin-bottom:6px}
+  .card p{font-size:13px; color:var(--ink2)}
+  .card p + p{margin-top:8px}
+  .card .big{font-size:19px; font-weight:650; color:var(--ink); letter-spacing:-.01em}
+
+  .fineprint{font-size:12px; color:var(--muted); max-width:78ch}
+
+  @media (prefers-reduced-motion: no-preference){
+    .drawin{stroke-dasharray:var(--len); stroke-dashoffset:var(--len); animation:draw 900ms cubic-bezier(.4,0,.2,1) forwards}
+    @keyframes draw{to{stroke-dashoffset:0}}
+    .fadein{opacity:0; animation:fade 500ms 650ms ease forwards}
+    @keyframes fade{to{opacity:1}}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="eyebrow">Ontario · GTA edition</div>
+    <h1>Own or rent?</h1>
+    <p class="sub">Both paths start with the same cash. One buys a home; the other invests it and rents.
+    Drag the sliders and watch net worth play out, month by month.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="rail" id="rail"></aside>
+
+    <main>
+      <section class="verdict" aria-live="polite">
+        <div class="line" id="verdictLine"></div>
+        <div class="tiles" id="tiles"></div>
+      </section>
+
+      <section class="chart-card">
+        <div class="chart-head">
+          <div class="legend">
+            <span><span class="lkey" style="border-color:var(--buy)"></span>Buy</span>
+            <span><span class="lkey" style="border-color:var(--rent)"></span>Rent &amp; invest</span>
+          </div>
+          <div class="spacer"></div>
+          <span class="seg-label">Horizon</span>
+          <div class="seg" id="horizonSeg" role="group" aria-label="Time horizon"></div>
+          <span class="seg-label">Buy line</span>
+          <div class="seg" id="basisSeg" role="group" aria-label="Buy net worth basis"></div>
+        </div>
+        <div class="chart-wrap" id="chartWrap" tabindex="0" role="img" aria-label="Net worth over time, buying versus renting. Use arrow keys to inspect values; press Enter to pin a sale year. Full values are in the table below.">
+          <svg id="chart" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div class="crosshair" id="xhair"></div>
+          <div class="hoverdot" id="dotBuy" style="background:var(--buy)"></div>
+          <div class="hoverdot" id="dotRent" style="background:var(--rent)"></div>
+          <div class="tooltip" id="tooltip"></div>
+        </div>
+        <p class="chart-caption" id="chartCaption"></p>
+        <details class="tableview">
+          <summary>View as table</summary>
+          <div class="tbl-scroll"><table id="dataTable"></table></div>
+        </details>
+      </section>
+
+      <section class="sale">
+        <div class="sale-head">
+          <h2 id="saleTitle">If you sell in year 25</h2>
+          <span class="hint">hover the chart to preview any year · click to pin it</span>
+        </div>
+        <div class="sale-grid" id="saleGrid"></div>
+        <p class="sale-delta" id="saleDelta"></p>
+      </section>
+
+      <section class="cards" id="cards"></section>
+
+      <p class="fineprint">A model, not advice. It assumes a steady 25-year amortization (Canadian mortgages
+      compound semi-annually and renew every few years at new rates), smooth average returns with no bad-year
+      sequencing, and no income tax on investment gains (a TFSA/RRSP-ish best case — a taxable account would trim
+      the rent line, while a principal residence stays tax-free). Rent covers a comparable home. Maintenance
+      includes condo fees where they apply.</p>
+    </main>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------------- formatting ---------------- */
+const fmt$ = v => (v<0?"−":"") + "$" + Math.round(Math.abs(v)).toLocaleString("en-CA");
+const fmtC = v => {
+  const s = v<0 ? "−" : "", a = Math.abs(v);
+  if (a >= 995e3) return s+"$"+(a/1e6).toFixed(a<9.95e6?1:0)+"M";
+  if (a >= 1e3)   return s+"$"+Math.round(a/1e3)+"K";
+  return s+"$"+Math.round(a);
+};
+const fmtPct = v => (v % 1 ? v.toFixed(2).replace(/0$/,"") : v) + "%";
+
+/* ---------------- parameters ---------------- */
+const PARAMS = {
+  price:   {group:"home",   name:"Home price",              min:300000, max:3000000, step:10000, def:800000,  fmt:fmt$,   parse:parseMoney},
+  down:    {group:"home",   name:"Down payment",            min:5,      max:80,      step:1,     def:20,
+            fmt: v => fmt$(Math.round(state.price*v/100)),
+            parse: s => {
+              const hasPct = /%/.test(s), v = parseMoney(s);
+              if (v === null) return null;
+              return (hasPct || v <= 100) ? v : v/state.price*100;
+            }},
+  rate:    {group:"home",   name:"Mortgage rate · 25 yr",   min:1,      max:9,       step:0.05,  def:4,       fmt:fmtPct, parse:parseNum},
+  rent:    {group:"renting",name:"Monthly rent",            min:1200,   max:8000,    step:50,    def:2800,    fmt:fmt$,   parse:parseMoney},
+  app:     {group:"growth", name:"Home appreciation / yr",  min:-2,     max:8,       step:0.1,   def:3,       fmt:fmtPct, parse:parseNum},
+  stock:   {group:"growth", name:"Stock market return / yr",min:0,      max:12,      step:0.1,   def:7,       fmt:fmtPct, parse:parseNum},
+  rentInf: {group:"growth", name:"Rent inflation / yr",     min:0,      max:6,       step:0.1,   def:2.5,     fmt:fmtPct, parse:parseNum},
+  taxPct:  {group:"monthly", name:"Property tax / yr",       min:0.3,   max:1.5,     step:0.01,  def:0.72,    fmt:fmtPct, parse:parseNum},
+  maintPct:{group:"monthly", name:"Maintenance & condo fees / yr", min:0, max:2.5,   step:0.05,  def:1,       fmt:fmtPct, parse:parseNum},
+  insMo:   {group:"monthly", name:"Home insurance / mo",     min:0,     max:500,     step:10,    def:150,     fmt:fmt$,   parse:parseMoney},
+  buyMisc: {group:"buycosts", name:"Lawyer, title & inspection", min:0, max:10000,   step:250,   def:3500,    fmt:fmt$,   parse:parseMoney},
+  sellPct: {group:"sellcosts", name:"Commission", min:2,     max:7,       step:0.25,  def:5,       fmt:fmtPct, parse:parseNum},
+};
+const GROUPS = [
+  {id:"home",    title:"The home"},
+  {id:"renting", title:"The alternative"},
+  {id:"growth",  title:"Growth assumptions"},
+  {id:"monthly", title:"Monthly ownership costs"},
+  {id:"buycosts", title:"Buying costs", sub:"Paid once, at closing. The buyer pays these — commission is not one of them."},
+  {id:"sellcosts", title:"Selling costs", sub:"Paid once, when you sell. The seller pays both agents — including the buyer's."},
+];
+const LEGAL_SELL = 2500, HST = 0.13;
+const state = {years:25, basis:"sold", ftb:false, toronto:false, pin:null};
+for (const k in PARAMS) state[k] = PARAMS[k].def;
+
+function parseNum(s){ const v = parseFloat(String(s).replace(/[%,$\s]/g,"")); return isNaN(v)?null:v; }
+function parseMoney(s){
+  s = String(s).trim().toLowerCase().replace(/[,$\s]/g,"");
+  let mult = 1;
+  if (/m$/.test(s)) { mult = 1e6; s = s.slice(0,-1); }
+  else if (/k$/.test(s)) { mult = 1e3; s = s.slice(0,-1); }
+  const v = parseFloat(s);
+  return isNaN(v) ? null : v*mult;
+}
+
+/* ---------------- Toronto land transfer tax ---------------- */
+function lttOne(v, luxury){
+  const br = [[55000,.005],[250000,.01],[400000,.015],[2000000,.02]];
+  if (luxury) br.push([3000000,.025],[4000000,.035],[5000000,.045],[10000000,.055],[20000000,.065],[Infinity,.075]);
+  else br.push([Infinity,.025]);
+  let tax = 0, prev = 0;
+  for (const [cap, r] of br){
+    if (v > prev) tax += (Math.min(v,cap)-prev)*r;
+    prev = cap;
+    if (v <= cap) break;
+  }
+  return tax;
+}
+function closingCosts(price, ftb, misc, cmhcPst, toronto){
+  let prov = lttOne(price,false);
+  let city = toronto ? lttOne(price,true) : 0;   // Toronto's 2nd LTT — City of Toronto only, not the 905
+  if (ftb){ prov = Math.max(0, prov-4000); if (toronto) city = Math.max(0, city-4475); }
+  return {prov, city, misc, cmhcPst, total:prov+city+misc+cmhcPst};
+}
+/* CMHC mortgage default insurance — required under 20% down (insurable up to $1.5M).
+   Premium is financed into the loan; Ontario's 8% PST on it is due in cash at closing. */
+function cmhcPremium(loan, downPct, price){
+  if (downPct >= 20 || price > 1500000 || loan <= 0) return 0;
+  const rate = downPct < 10 ? 0.04 : downPct < 15 ? 0.031 : 0.028;
+  return loan*rate;
+}
+
+/* ---------------- simulation ---------------- */
+function simulate(s){
+  const N = s.years*12;
+  const downAmt = s.price*s.down/100;
+  const cmhc = cmhcPremium(s.price - downAmt, s.down, s.price);
+  const loan = s.price - downAmt + cmhc;                       // premium is financed
+  const i = Math.pow(1 + s.rate/200, 1/6) - 1;                 // semi-annual compounding
+  const pay = loan>0 ? loan*i/(1-Math.pow(1+i,-300)) : 0;      // 25-year amortization
+  const close = closingCosts(s.price, s.ftb, s.buyMisc, cmhc*0.08, s.toronto);
+  const cash0 = downAmt + close.total;
+  const gH = Math.pow(1+s.app/100, 1/12), gS = Math.pow(1+s.stock/100, 1/12), gR = Math.pow(1+s.rentInf/100, 1/12);
+  const sellCost = hv => hv*(s.sellPct/100)*(1+HST) + LEGAL_SELL;
+
+  let homeVal = s.price, bal = loan, ownPort = 0, rentPort = cash0;
+  let rent = s.rent, ins = s.insMo, rentContrib = 0, ownContrib = 0, interestPaid = 0;
+  const rows = [];
+  const push = (m, mort, carry, curRent) => rows.push({
+    m, homeVal, bal, ownPort, rentPort, rent:curRent, mort, carry,
+    sellCost: sellCost(homeVal),
+    buyPaper: homeVal - bal + ownPort,
+    buySold:  homeVal - bal + ownPort - sellCost(homeVal),
+  });
+  push(0, pay, homeVal*(s.taxPct+s.maintPct)/1200 + ins, rent);
+  for (let m=1; m<=N; m++){
+    homeVal *= gH;
+    let mort = 0;
+    if (bal > 1e-6){
+      const interest = bal*i;
+      let principal = pay - interest;
+      mort = pay;
+      if (principal >= bal){ mort = bal + interest; principal = bal; }
+      bal -= principal;
+      interestPaid += interest;
+    }
+    const carry = homeVal*(s.taxPct+s.maintPct)/1200 + ins;
+    const ownCost = mort + carry;
+    ownPort *= gS; rentPort *= gS;
+    const diff = ownCost - rent;
+    if (diff > 0){ rentPort += diff; rentContrib += diff; }
+    else { ownPort += -diff; ownContrib += -diff; }
+    push(m, mort, carry, rent);
+    rent *= gR; ins *= gR;
+  }
+  const buyAt  = r => state.basis==="sold" ? r.buySold : r.buyPaper;
+  let breakeven = null;
+  if (buyAt(rows[0]) >= rows[0].rentPort) breakeven = 0;
+  else for (let m=1; m<=N; m++) if (buyAt(rows[m]) >= rows[m].rentPort){ breakeven = m; break; }
+  return {rows, pay, loan, downAmt, cmhc, close, cash0, i, breakeven, rentContrib, ownContrib, buyAt,
+          firstInterest: loan*i, firstPrincipal: pay - loan*i};
+}
+
+/* ---------------- control rail ---------------- */
+const rail = document.getElementById("rail");
+function buildRail(){
+  const mkSwitch = (sec, label, checked, onChange) => {
+    const fl = document.createElement("label"); fl.className = "switch";
+    const nm = document.createElement("span"); nm.className = "name"; nm.textContent = label;
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.checked = checked;
+    cb.addEventListener("change", () => { onChange(cb.checked); state.pin = null; render(); });
+    const kn = document.createElement("span"); kn.className = "knob";
+    fl.append(nm, cb, kn); sec.appendChild(fl);
+  };
+  for (const g of GROUPS){
+    const sec = document.createElement("section");
+    sec.className = "group";
+    const h = document.createElement("h3"); h.textContent = g.title; sec.appendChild(h);
+    if (g.sub){ const gs = document.createElement("p"); gs.className = "g-sub"; gs.textContent = g.sub; sec.appendChild(gs); }
+    for (const k in PARAMS){
+      const p = PARAMS[k];
+      if (p.group !== g.id) continue;
+      const lab = document.createElement("label"); lab.className = "param";
+      const top = document.createElement("div"); top.className = "param-top";
+      const nm = document.createElement("span"); nm.className = "name"; nm.textContent = p.name;
+      const val = document.createElement("input");
+      val.className = "val"; val.type = "text"; val.dataset.k = k;
+      val.setAttribute("aria-label", p.name + " value");
+      top.append(nm, val);
+      const rng = document.createElement("input");
+      rng.type = "range"; rng.min = p.min; rng.max = p.max; rng.step = p.step; rng.dataset.k = k;
+      rng.setAttribute("aria-label", p.name);
+      lab.append(top, rng);
+      sec.appendChild(lab);
+      if (k === "down"){
+        const sn = document.createElement("div"); sn.className = "subnote"; sn.id = "downNote";
+        sec.appendChild(sn);
+      }
+      rng.addEventListener("input", () => { state[k] = +rng.value; state.pin = null; render(); });
+      val.addEventListener("change", () => {
+        const v = p.parse(val.value);
+        if (v !== null) state[k] = Math.min(p.max, Math.max(p.min, v));
+        state.pin = null; render();
+      });
+      val.addEventListener("keydown", e => { if (e.key === "Enter") val.blur(); });
+    }
+    if (g.id === "buycosts"){
+      mkSwitch(sec, "City of Toronto (2nd land transfer tax)", state.toronto, v => state.toronto = v);
+      mkSwitch(sec, "First-time buyer rebate", state.ftb, v => state.ftb = v);
+      const chip = document.createElement("div"); chip.className = "breakdown"; chip.id = "closeChip";
+      sec.appendChild(chip);
+    }
+    if (g.id === "sellcosts"){
+      const chip = document.createElement("div"); chip.className = "breakdown"; chip.id = "sellChip";
+      sec.appendChild(chip);
+    }
+    rail.appendChild(sec);
+  }
+}
+function syncRail(sim){
+  rail.querySelectorAll("input[type=range]").forEach(r => {
+    const k = r.dataset.k, p = PARAMS[k];
+    r.value = state[k];
+    r.style.setProperty("--fill", ((state[k]-p.min)/(p.max-p.min)*100)+"%");
+  });
+  rail.querySelectorAll("input.val").forEach(v => {
+    if (document.activeElement !== v) v.value = PARAMS[v.dataset.k].fmt(state[v.dataset.k]);
+  });
+  document.getElementById("downNote").textContent =
+    fmtPct(state.down) + " of price · " + fmt$(sim.loan) + " mortgage" +
+    (sim.cmhc > 0 ? " (incl. CMHC)" : "") + " — type a % or a $ amount";
+  const fillChip = (id, titleText, rows, noteText) => {
+    const chip = document.getElementById(id);
+    chip.textContent = "";
+    const title = document.createElement("div"); title.className = "b-title";
+    title.textContent = titleText; chip.appendChild(title);
+    rows.forEach(([n, v], idx) => {
+      const row = document.createElement("div");
+      row.className = "b-row" + (idx === rows.length-1 ? " b-total" : "");
+      const a = document.createElement("span"); a.textContent = n;
+      const b = document.createElement("span"); b.className = "n"; b.textContent = fmt$(v);
+      row.append(a, b); chip.appendChild(row);
+    });
+    if (noteText){
+      const note = document.createElement("div"); note.className = "b-note";
+      note.textContent = noteText; chip.appendChild(note);
+    }
+  };
+  const buyRows = [["Ontario land transfer tax", sim.close.prov]];
+  if (state.toronto) buyRows.push(["Toronto land transfer tax", sim.close.city]);
+  buyRows.push(["Lawyer, title & inspection", sim.close.misc]);
+  if (sim.close.cmhcPst > 0) buyRows.push(["PST on CMHC insurance", sim.close.cmhcPst]);
+  buyRows.push(["Total, cash at closing", sim.close.total]);
+  fillChip("closeChip", "What you pay when you buy", buyRows,
+    sim.cmhc > 0 ? "Under 20% down: " + fmt$(sim.cmhc) + " CMHC insurance premium is added to the mortgage." : null);
+  const comm = state.price*state.sellPct/100;
+  fillChip("sellChip", "What you pay when you sell — at today's price", [
+    ["Commission (" + fmtPct(state.sellPct) + ")", comm],
+    ["HST on commission (13%)", comm*HST],
+    ["Legal & mortgage discharge", LEGAL_SELL],
+    ["Total", comm*(1+HST)+LEGAL_SELL],
+  ], "No land transfer tax when selling. The chart charges this on the future sale price as the home appreciates.");
+}
+
+/* ---------------- segmented controls ---------------- */
+function buildSeg(el, options, get, set){
+  for (const o of options){
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = o.label;
+    b.addEventListener("click", () => { set(o.value); render(); });
+    b.dataset.v = o.value;
+    el.appendChild(b);
+  }
+  el._sync = () => el.querySelectorAll("button").forEach(b =>
+    b.setAttribute("aria-pressed", String(b.dataset.v) === String(get())));
+}
+buildSeg(document.getElementById("horizonSeg"),
+  [5,10,15,25,30].map(y => ({label:y+"y", value:y})),
+  () => state.years, v => { state.years = v; state.pin = null; });
+buildSeg(document.getElementById("basisSeg"),
+  [{label:"If you sold", value:"sold"},{label:"On paper", value:"paper"}],
+  () => state.basis, v => { state.basis = v; });
+
+/* ---------------- chart ---------------- */
+const wrap = document.getElementById("chartWrap"), svgEl = document.getElementById("chart");
+const xhair = document.getElementById("xhair"), tt = document.getElementById("tooltip");
+const dotB = document.getElementById("dotBuy"), dotR = document.getElementById("dotRent");
+let scale = null, curSim = null, hoverM = null, firstDraw = true;
+
+function niceStep(raw){
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  for (const m of [1,2,2.5,5,10]) if (raw <= m*p) return m*p;
+  return 10*p;
+}
+function drawChart(sim){
+  const W = Math.max(320, wrap.clientWidth), H = W < 560 ? 300 : 380;
+  const ML = 8, MR = 84, MT = 18, MB = 30;
+  const rows = sim.rows, N = rows.length-1;
+  const buy = rows.map(sim.buyAt), rentV = rows.map(r => r.rentPort);
+  let lo = Math.min(...buy, ...rentV), hi = Math.max(...buy, ...rentV);
+  if (hi === lo) hi = lo+1;
+  const pad = (hi-lo)*0.06; lo -= pad; hi += pad;
+  if (lo > 0 && lo < (hi-lo)*0.4) lo = 0;
+  const step = niceStep((hi-lo)/5);
+  const y0 = Math.floor(lo/step)*step, y1 = Math.ceil(hi/step)*step;
+  const X = m => ML + 46 + (W-ML-MR-46)*(m/N);
+  const Y = v => MT + (H-MT-MB)*(1-(v-y0)/(y1-y0));
+  scale = {X, Y, N, W, H, top:MT, bottom:H-MB};
+
+  let g = "";
+  for (let v=y0; v<=y1+1e-9; v+=step){
+    const y = Y(v).toFixed(1);
+    g += `<line x1="${ML+46}" x2="${W-MR+40}" y1="${y}" y2="${y}" stroke="${v===0?'var(--axis)':'var(--grid)'}" stroke-width="1"/>`;
+    g += `<text x="${ML+40}" y="${+y+4}" text-anchor="end" font-size="11" fill="var(--muted)" style="font-variant-numeric:tabular-nums">${fmtC(v)}</text>`;
+  }
+  const xstep = state.years<=10 ? (state.years<=5?1:2) : 5;
+  for (let yr=0; yr<=state.years; yr+=xstep){
+    const x = X(yr*12).toFixed(1);
+    g += `<text x="${x}" y="${H-9}" text-anchor="middle" font-size="11" fill="var(--muted)">${yr===0?"today":"yr "+yr}</text>`;
+  }
+  const path = arr => arr.map((v,m) => (m?"L":"M") + X(m).toFixed(1) + " " + Y(v).toFixed(1)).join("");
+  const anim = firstDraw && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const lineAttr = anim ? ` class="drawin" style="--len:${Math.round(W*1.6)}"` : "";
+  g += `<path d="${path(rentV)}" fill="none" stroke="var(--rent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${lineAttr}/>`;
+  g += `<path d="${path(buy)}"  fill="none" stroke="var(--buy)"  stroke-width="2" stroke-linejoin="round" stroke-linecap="round"${lineAttr}/>`;
+
+  // breakeven marker
+  if (sim.breakeven !== null && sim.breakeven > 0){
+    const bx = X(sim.breakeven), by = Y(buy[sim.breakeven]);
+    const labY = Math.max(MT+10, by-14);
+    g += `<g${anim?' class="fadein"':''}>`;
+    g += `<circle cx="${bx.toFixed(1)}" cy="${by.toFixed(1)}" r="4.5" fill="var(--buy)" stroke="var(--card)" stroke-width="2"/>`;
+    const t = "buying pulls ahead · yr " + (sim.breakeven/12).toFixed(1).replace(/\.0$/,"");
+    const anchor = bx > (W-MR)*0.62 ? "end" : (bx < 160 ? "start" : "middle");
+    g += `<text x="${bx.toFixed(1)}" y="${labY.toFixed(1)}" text-anchor="${anchor}" font-size="11" font-weight="600" fill="var(--ink2)">${t}</text></g>`;
+  }
+  // end dots + direct labels (collision-nudged)
+  const ends = [
+    {v:buy[N],  color:"var(--buy)",  label:"Buy"},
+    {v:rentV[N],color:"var(--rent)", label:"Rent"},
+  ].sort((a,b) => Y(a.v)-Y(b.v));
+  let prevY = -99;
+  for (const e of ends){
+    let ly = Y(e.v);
+    if (ly - prevY < 30) ly = prevY + 30;
+    ly = Math.min(Math.max(ly, MT+10), H-MB-14);
+    prevY = ly;
+    const ex = X(N);
+    g += `<g${anim?' class="fadein"':''}>`;
+    if (Math.abs(ly - Y(e.v)) > 8)
+      g += `<line x1="${(ex+5).toFixed(1)}" y1="${Y(e.v).toFixed(1)}" x2="${(ex+11).toFixed(1)}" y2="${ly.toFixed(1)}" stroke="var(--axis)" stroke-width="1"/>`;
+    g += `<circle cx="${ex.toFixed(1)}" cy="${Y(e.v).toFixed(1)}" r="4.5" fill="${e.color}" stroke="var(--card)" stroke-width="2"/>`;
+    g += `<text x="${(ex+14).toFixed(1)}" y="${(ly-2).toFixed(1)}" font-size="11" fill="var(--ink2)">${e.label}</text>`;
+    g += `<text x="${(ex+14).toFixed(1)}" y="${(ly+11).toFixed(1)}" font-size="12" font-weight="650" fill="var(--ink)">${fmtC(e.v)}</text></g>`;
+  }
+  // pinned sale marker
+  if (state.pin !== null && state.pin <= N){
+    const px = X(state.pin);
+    g += `<line x1="${px.toFixed(1)}" x2="${px.toFixed(1)}" y1="${MT}" y2="${H-MB}" stroke="var(--axis)" stroke-width="1"/>`;
+    g += `<circle cx="${px.toFixed(1)}" cy="${Y(buy[state.pin]).toFixed(1)}" r="4" fill="var(--buy)" stroke="var(--card)" stroke-width="2"/>`;
+    g += `<circle cx="${px.toFixed(1)}" cy="${Y(rentV[state.pin]).toFixed(1)}" r="4" fill="var(--rent)" stroke="var(--card)" stroke-width="2"/>`;
+  }
+  svgEl.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svgEl.setAttribute("width", W); svgEl.setAttribute("height", H);
+  svgEl.innerHTML = g;
+  firstDraw = false;
+}
+
+/* hover / pin interaction */
+function monthFromEvent(e){
+  const r = wrap.getBoundingClientRect();
+  const frac = ((e.clientX - r.left) - (8+46)) / (scale.W - 8 - 84 - 46);
+  return Math.max(0, Math.min(scale.N, Math.round(frac*scale.N)));
+}
+function showHover(m){
+  hoverM = m;
+  const row = curSim.rows[m], b = curSim.buyAt(row), rv = row.rentPort;
+  const x = scale.X(m);
+  xhair.style.display = "block";
+  xhair.style.left = x+"px"; xhair.style.top = scale.top+"px";
+  xhair.style.height = (scale.bottom - scale.top)+"px";
+  dotB.style.display = dotR.style.display = "block";
+  dotB.style.left = dotR.style.left = x+"px";
+  dotB.style.top = scale.Y(b)+"px"; dotR.style.top = scale.Y(rv)+"px";
+  tt.textContent = "";
+  const when = document.createElement("div"); when.className = "tt-when";
+  const yr = Math.floor(m/12), mo = m%12;
+  when.textContent = m===0 ? "Today (day one)" : "Year " + (m/12).toFixed(1).replace(/\.0$/,"") + (mo ? "" : " · month "+m);
+  tt.appendChild(when);
+  for (const [name, v, color] of [["Buy", b, "var(--buy)"],["Rent", rv, "var(--rent)"]]){
+    const rowEl = document.createElement("div"); rowEl.className = "tt-row";
+    const nm = document.createElement("span"); nm.className = "tt-name";
+    const key = document.createElement("span"); key.className = "lkey"; key.style.borderColor = color;
+    nm.append(key, document.createTextNode(name));
+    const val = document.createElement("span"); val.className = "v"; val.textContent = fmt$(v);
+    rowEl.append(nm, val); tt.appendChild(rowEl);
+  }
+  const d = document.createElement("div"); d.className = "tt-delta";
+  d.style.color = b>=rv ? "var(--good)" : "var(--bad)";
+  d.textContent = (b>=rv ? "Buying ahead by " : "Renting ahead by ") + fmtC(Math.abs(b-rv));
+  tt.appendChild(d);
+  tt.style.display = "block";
+  const ttw = tt.offsetWidth;
+  tt.style.left = Math.min(Math.max(8, x + (x > scale.W*0.6 ? -ttw-14 : 14)), scale.W-ttw-4) + "px";
+  tt.style.top = (scale.top + 6) + "px";
+  renderSale(m, true);
+}
+function hideHover(){
+  hoverM = null;
+  xhair.style.display = tt.style.display = dotB.style.display = dotR.style.display = "none";
+  renderSale(state.pin === null ? curSim.rows.length-1 : state.pin, false);
+}
+wrap.addEventListener("pointermove", e => { if (scale) showHover(monthFromEvent(e)); });
+wrap.addEventListener("pointerleave", hideHover);
+wrap.addEventListener("click", e => {
+  if (!scale) return;
+  const m = monthFromEvent(e);
+  state.pin = state.pin === m ? null : m;
+  render();
+  showHover(m);
+});
+wrap.addEventListener("keydown", e => {
+  if (!scale) return;
+  const cur = hoverM === null ? (state.pin === null ? scale.N : state.pin) : hoverM;
+  if (e.key === "ArrowLeft" || e.key === "ArrowRight"){
+    e.preventDefault();
+    const d = (e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 12 : 1);
+    showHover(Math.max(0, Math.min(scale.N, cur + d)));
+  } else if (e.key === "Enter" && hoverM !== null){
+    state.pin = state.pin === hoverM ? null : hoverM;
+    render(); showHover(hoverM);
+  } else if (e.key === "Escape") hideHover();
+});
+wrap.addEventListener("blur", hideHover);
+
+/* ---------------- verdict + tiles ---------------- */
+function renderVerdict(sim){
+  const rows = sim.rows, N = rows.length-1;
+  const b = sim.buyAt(rows[N]), rv = rows[N].rentPort, d = b-rv;
+  const line = document.getElementById("verdictLine");
+  line.textContent = "";
+  const winner = d >= 0 ? {word:"buying", color:"var(--buy)"} : {word:"renting & investing", color:"var(--rent)"};
+  const dot = document.createElement("span"); dot.className = "keydot"; dot.style.background = winner.color;
+  const fig = document.createElement("span"); fig.className = "figure"; fig.textContent = fmtC(Math.abs(d));
+  line.append(`Over ${state.years} years, `, dot, `${winner.word} comes out ahead by `, fig,
+    d>=0 && sim.breakeven ? ` — it takes ${(sim.breakeven/12).toFixed(1).replace(/\.0$/,"")} years to get there.` : ".");
+
+  const firstOwn = rows[1] ? rows[1].mort + rows[1].carry : 0;
+  const gap = firstOwn - state.rent;
+  const tiles = [
+    {label:"Breakeven", value: sim.breakeven === null ? "—" : (sim.breakeven === 0 ? "Day one" : "Year " + (sim.breakeven/12).toFixed(1).replace(/\.0$/,"")),
+     sub: sim.breakeven === null ? "buying never catches up in this window" : "when the buy line crosses the rent line"},
+    {label:`Buy · year ${state.years}`, value: fmtC(b), sub: state.basis==="sold" ? "walk-away cash if you sold" : "equity on paper", color:null},
+    {label:`Rent · year ${state.years}`, value: fmtC(rv), sub:"investment portfolio"},
+    {label:"Monthly cost gap, today", value: (gap>=0?"+":"−") + fmtC(Math.abs(gap)),
+     sub: gap>=0 ? "owning costs more — the renter invests this" : "renting costs more — the owner invests this"},
+  ];
+  const tEl = document.getElementById("tiles");
+  tEl.textContent = "";
+  for (const t of tiles){
+    const el = document.createElement("div"); el.className = "tile";
+    const l = document.createElement("div"); l.className = "t-label"; l.textContent = t.label;
+    const v = document.createElement("div"); v.className = "t-value"; v.textContent = t.value;
+    const s = document.createElement("div"); s.className = "t-sub"; s.textContent = t.sub;
+    el.append(l,v,s); tEl.appendChild(el);
+  }
+}
+
+/* ---------------- sale panel ---------------- */
+function renderSale(m, isPreview){
+  const rows = curSim.rows;
+  m = Math.min(m, rows.length-1);
+  const r = rows[m];
+  const yrs = (m/12).toFixed(1).replace(/\.0$/,"");
+  document.getElementById("saleTitle").textContent =
+    m === 0 ? "If you sell on day one" : `If you sell in year ${yrs}` + (isPreview && state.pin !== m ? " (previewing)" : "");
+  const buyCash = r.homeVal - r.sellCost - r.bal + r.ownPort;
+  const grid = document.getElementById("saleGrid");
+  grid.textContent = "";
+  const ledger = (title, color, items, total) => {
+    const el = document.createElement("div"); el.className = "ledger";
+    const h = document.createElement("h4");
+    const key = document.createElement("span"); key.className = "keydot"; key.style.background = color; key.style.margin = "0 8px 0 0";
+    h.append(key, document.createTextNode(title)); el.appendChild(h);
+    for (const [n, v] of items){
+      const row = document.createElement("div"); row.className = "row";
+      const a = document.createElement("span"); a.textContent = n;
+      const b = document.createElement("span"); b.className = "n"; b.textContent = v;
+      row.append(a,b); el.appendChild(row);
+    }
+    const trow = document.createElement("div"); trow.className = "row total";
+    const a = document.createElement("span"); a.textContent = "Walk-away cash";
+    const b = document.createElement("span"); b.className = "n"; b.textContent = fmt$(total);
+    trow.append(a,b); el.appendChild(trow);
+    return el;
+  };
+  const buyItems = [
+    ["Sale price", fmt$(r.homeVal)],
+    ["Selling costs (" + fmtPct(state.sellPct) + " + HST + legal)", "−" + fmt$(r.sellCost)],
+    ["Mortgage remaining", "−" + fmt$(r.bal)],
+  ];
+  if (r.ownPort > 0.5) buyItems.push(["Investments along the way", "+" + fmt$(r.ownPort)]);
+  const rentItems = [
+    ["Down payment + closing costs, invested on day one", fmt$(curSim.cash0)],
+    ["Monthly gap invested since", "+" + fmt$(Math.min(curSim.rentContrib, 1e15))],
+    ["Growth at " + fmtPct(state.stock) + " / yr", "+" + fmt$(Math.max(0, r.rentPort - curSim.cash0 - curSim.rentContrib))],
+  ];
+  grid.append(
+    ledger("Sell the home", "var(--buy)", buyItems, buyCash),
+    ledger("Cash out the portfolio", "var(--rent)", rentItems, r.rentPort)
+  );
+  const d = buyCash - r.rentPort;
+  const delta = document.getElementById("saleDelta");
+  delta.textContent = "";
+  const strong = document.createElement("strong");
+  strong.style.color = d >= 0 ? "var(--good)" : "var(--bad)";
+  strong.textContent = fmtC(Math.abs(d));
+  delta.append("Apples to apples — both standing in the same spot with cash in hand — ",
+    d >= 0 ? "the buyer walks away with " : "the renter walks away with ", strong, " more.");
+}
+
+/* ---------------- explainer cards ---------------- */
+function renderCards(sim){
+  const cards = [
+    {title:"Your mortgage payment",
+     big: fmt$(sim.pay) + " / mo",
+     body:[`A ${fmt$(sim.loan)} mortgage over 25 years at ${fmtPct(state.rate)} (compounded semi-annually, the Canadian way).` +
+       (sim.cmhc > 0 ? ` That includes a ${fmt$(sim.cmhc)} CMHC insurance premium — the price of putting down less than 20%.` : ""),
+       `Of the first payment, ${fmt$(sim.firstInterest)} is interest — gone — and ${fmt$(sim.firstPrincipal)} pays down the loan, which is money you keep. That split slowly flips in your favour.`]},
+    {title:"The renter's engine: compounding",
+     big: fmt$(sim.cash0) + " invested on day one",
+     body:[`The renter takes the same cash the buyer hands over — down payment plus closing costs — and invests it. At ${fmtPct(state.stock)} a year it doubles roughly every ${Math.max(1,Math.round(72/Math.max(0.1,state.stock)))} years.`,
+       `Each month, whoever pays less invests the difference. That discipline is the whole rent case — skip it, and buying wins by forfeit.`]},
+    {title:"Who pays which fees?",
+     big:"You pay each side once",
+     body:[`Buying: you pay the land transfer tax${state.toronto ? " (twice — Ontario's and Toronto's" : " (Markham and the rest of the 905 skip Toronto's second one"}), lawyer, title and inspection. No commission — the seller pays both agents, including yours.`,
+       `Selling: now it's your turn — the full commission plus HST and legal come out of your sale price. Day one carries your buying costs; the “If you sold” line always carries your selling costs, so both ends of the trip are in the math.`]},
+    {title:"What each line counts",
+     big:"Same cash, two paths",
+     body:[`Buy = home value − mortgage remaining${state.basis==="sold" ? " − the cost of selling (commission + HST, legal)" : ""}${sim.ownContrib>1 ? " + anything the owner invested" : ""}.`,
+       `Rent = the portfolio. Toggle “On paper” to see equity before selling costs — “If you sold” is the honest apples-to-apples number.`]},
+  ];
+  const el = document.getElementById("cards");
+  el.textContent = "";
+  for (const c of cards){
+    const card = document.createElement("div"); card.className = "card";
+    const h = document.createElement("h4"); h.textContent = c.title;
+    const big = document.createElement("p"); big.className = "big"; big.textContent = c.big;
+    card.append(h, big);
+    for (const b of c.body){ const p = document.createElement("p"); p.textContent = b; card.appendChild(p); }
+    el.appendChild(card);
+  }
+}
+
+/* ---------------- table view ---------------- */
+function renderTable(sim){
+  const t = document.getElementById("dataTable");
+  t.textContent = "";
+  const head = t.insertRow();
+  for (const h of ["Year","Buy","Rent & invest","Difference"]){
+    const th = document.createElement("th"); th.textContent = h; head.appendChild(th);
+  }
+  for (let yr=0; yr<=state.years; yr++){
+    const r = sim.rows[Math.min(yr*12, sim.rows.length-1)];
+    const b = sim.buyAt(r), d = b - r.rentPort;
+    const row = t.insertRow();
+    row.insertCell().textContent = yr === 0 ? "Today" : yr;
+    row.insertCell().textContent = fmt$(b);
+    row.insertCell().textContent = fmt$(r.rentPort);
+    const dc = row.insertCell();
+    dc.textContent = (d>=0?"+":"−") + fmt$(Math.abs(d)).replace("−","");
+    dc.style.color = d>=0 ? "var(--good)" : "var(--bad)";
+  }
+}
+
+/* ---------------- main render ---------------- */
+function render(){
+  curSim = simulate(state);
+  syncRail(curSim);
+  document.getElementById("horizonSeg")._sync();
+  document.getElementById("basisSeg")._sync();
+  drawChart(curSim);
+  renderVerdict(curSim);
+  renderSale(state.pin === null ? curSim.rows.length-1 : state.pin, false);
+  renderCards(curSim);
+  renderTable(curSim);
+  document.getElementById("chartCaption").textContent =
+    `Net worth by month · both paths start with the same ${fmt$(curSim.cash0)} in cash (down payment + closing costs) · ` +
+    (state.basis === "sold" ? "buy line is what you'd pocket after selling costs and paying off the mortgage."
+                            : "buy line is equity on paper, before the cost of selling.");
+}
+
+buildRail();
+render();
+let rsz;
+addEventListener("resize", () => { clearTimeout(rsz); rsz = setTimeout(() => { if (curSim) drawChart(curSim); }, 80); });
+</script>
+</body>
+</html>

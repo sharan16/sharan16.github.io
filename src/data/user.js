@@ -69,12 +69,12 @@ const INFO = {
 	],
 	projects: [
 		{
-			title: "Project 1",
+			title: "Own or Rent?",
 			description:
-				"Lorem ipsum dolor sit amet. Et incidunt voluptatem ex tempore repellendus qui dicta nemo sit deleniti minima.",
+				"An interactive rent-vs-buy calculator for Ontario & the GTA. Simulates two net-worth paths month by month — mortgage amortization, land transfer tax, CMHC insurance, selling costs, and the renter's compounding portfolio — on one clean, tweakable chart.",
 			logo: "https://cdn.jsdelivr.net/npm/programming-languages-logos/src/javascript/javascript.png",
-			linkText: "View Project",
-			link: "https://github.com",
+			linkText: "Try it live",
+			link: "/ownvsrent/",
 		},
 
 		{
