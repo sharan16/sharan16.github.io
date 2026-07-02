@@ -48,6 +48,15 @@
   }
   h1 em{font-style:italic; color:var(--accent)}
   .sub{color:var(--ink2); max-width:60ch; margin-top:12px; font-size:12.5px; line-height:1.8}
+  .share{
+    display:inline-block; margin-top:16px; background:none; border:none; cursor:pointer;
+    font-family:var(--mono); font-size:10px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--accent); border-bottom:1px solid var(--accent-dim); padding:0 0 4px;
+    transition:letter-spacing .25s;
+  }
+  .share:hover{letter-spacing:.24em}
+  .share:focus-visible{outline:1px solid var(--accent); outline-offset:4px}
+  .share.copied{color:var(--good); border-bottom-color:var(--good)}
 
   /* ---------- layout ---------- */
   .layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:24px; align-items:start}
@@ -218,6 +227,7 @@
     <h1>Own <em>or</em> rent?</h1>
     <p class="sub">Both paths start with the same cash. One buys a home; the other invests it and rents.
     Drag the sliders and watch net worth play out, month by month.</p>
+    <button type="button" class="share" id="shareBtn">Copy link to this scenario →</button>
   </header>
 
   <div class="layout">
@@ -828,6 +838,59 @@ function renderTable(sim){
   }
 }
 
+/* ---------------- shareable URL ----------------
+   Every setting lives in the #hash (defaults omitted), so a copied URL
+   reproduces the exact scenario — sliders, horizon, toggles, pinned year. */
+function hashToState(){
+  const q = new URLSearchParams(location.hash.slice(1));
+  for (const k in PARAMS){
+    if (!q.has(k)) continue;
+    const v = parseFloat(q.get(k));
+    if (isFinite(v)) state[k] = Math.min(PARAMS[k].max, Math.max(PARAMS[k].min, v));
+  }
+  if (q.has("yrs")){ const y = +q.get("yrs"); if ([5,10,15,25,30].includes(y)) state.years = y; }
+  if (q.get("basis") === "paper") state.basis = "paper";
+  if (q.get("ftb") === "1") state.ftb = true;
+  if (q.get("tor") === "1") state.toronto = true;
+  if (q.has("pin")){
+    const p = parseInt(q.get("pin"), 10);
+    if (isFinite(p) && p >= 0 && p <= state.years*12) state.pin = p;
+  }
+}
+function stateToHash(){
+  const q = new URLSearchParams();
+  for (const k in PARAMS) if (state[k] !== PARAMS[k].def) q.set(k, state[k]);
+  if (state.years !== 25) q.set("yrs", state.years);
+  if (state.basis !== "sold") q.set("basis", state.basis);
+  if (state.ftb) q.set("ftb", "1");
+  if (state.toronto) q.set("tor", "1");
+  if (state.pin !== null) q.set("pin", state.pin);
+  const s = q.toString();
+  try {
+    history.replaceState(null, "", s ? "#" + s : location.pathname + location.search);
+  } catch (e) { /* sandboxed embeds may forbid history writes */ }
+}
+let hashTimer;
+function scheduleHash(){ clearTimeout(hashTimer); hashTimer = setTimeout(stateToHash, 250); }
+
+document.getElementById("shareBtn").addEventListener("click", async () => {
+  stateToHash();
+  const btn = document.getElementById("shareBtn");
+  let ok = false;
+  try { await navigator.clipboard.writeText(location.href); ok = true; }
+  catch (e) {
+    const ta = document.createElement("textarea");
+    ta.value = location.href; document.body.appendChild(ta);
+    ta.select(); ok = document.execCommand("copy"); ta.remove();
+  }
+  btn.textContent = ok ? "Copied — send it to someone ✓" : "Copy failed — grab the address bar URL";
+  btn.classList.toggle("copied", ok);
+  setTimeout(() => {
+    btn.textContent = "Copy link to this scenario →";
+    btn.classList.remove("copied");
+  }, 2200);
+});
+
 /* ---------------- main render ---------------- */
 function render(){
   curSim = simulate(state);
@@ -843,8 +906,10 @@ function render(){
     `Net worth by month · both paths start with the same ${fmt$(curSim.cash0)} in cash (down payment + closing costs) · ` +
     (state.basis === "sold" ? "buy line is what you'd pocket after selling costs and paying off the mortgage."
                             : "buy line is equity on paper, before the cost of selling.");
+  scheduleHash();
 }
 
+hashToState();
 buildRail();
 render();
 let rsz;
