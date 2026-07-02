@@ -1,50 +1,36 @@
 import React, { useEffect } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
-import { faFaceSadTear } from "@fortawesome/free-regular-svg-icons";
-
-import NavBar from "../components/common/navBar";
-import Logo from "../components/common/logo";
-
-import INFO from "../data/user";
-
-import "./styles/404.css";
+import "./styles/homepage.css";
 
 const Notfound = () => {
 	useEffect(() => {
-		document.title = `404 | ${INFO.main.title}`;
+		document.title = "404 — Shan Somas";
+		document.body.classList.add("hx-body");
+		return () => document.body.classList.remove("hx-body");
 	}, []);
 
 	return (
-		<React.Fragment>
-			<div className="not-found page-content">
-				<NavBar />
-				<div className="content-wrapper">
-					<div className="notfound-logo-container">
-						<div className="projects-logo">
-							<Logo width={46} />
-						</div>
-					</div>
-					<div className="notfound-container">
-						<div className="notfound-message">
-							<div className="notfound-title">
-								Oops! <FontAwesomeIcon icon={faFaceSadTear} />
-							</div>
-							<div className="not-found-message">
-								We can't seem to find the page you're looking
-								for.
-								<br />
-								The requested URL "{window.location.href}" was
-								not found on this server.
-							</div>
-							<a href="/" className="not-found-link">
-								Go back to the home page
-							</a>
-						</div>
-					</div>
+		<div className="hx-root">
+			<header className="hx-bar">
+				<span className="hx-bar-name">SHAN&nbsp;SOMAS</span>
+				<nav className="hx-bar-nav">
+					<a href="/">INDEX</a>
+				</nav>
+			</header>
+			<section className="hx-hero">
+				<div className="hx-hero-copy">
+					<p className="hx-eyebrow">ERROR&nbsp;404&nbsp;—&nbsp;PLATE&nbsp;MISSING</p>
+					<h1 className="hx-display">
+						This page was <em>never&nbsp;engraved.</em>
+					</h1>
+					<p className="hx-hero-sub">
+						<a href="/" className="hx-product-cta">
+							RETURN&nbsp;TO&nbsp;THE&nbsp;INDEX&nbsp;→
+						</a>
+					</p>
 				</div>
-			</div>
-		</React.Fragment>
+			</section>
+		</div>
 	);
 };
 
