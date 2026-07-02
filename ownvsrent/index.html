@@ -5,47 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Own or Rent — Ontario</title>
 <meta name="description" content="An interactive rent-vs-buy calculator for Ontario and the GTA — see the true economics of buying a home, month by month.">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏠</text></svg>">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
+  /* ————————————————————————————————————————————————
+     OWN OR RENT — PLATE II
+     ground: warm near-black · ink: parchment · accent: old gold
+     EB Garamond (display) × IBM Plex Mono (spec)
+     ———————————————————————————————————————————————— */
   :root{
-    --page:#f7f6f3; --card:#fcfcfb; --card2:#f3f2ee;
-    --ink:#1b1b18; --ink2:#52514e; --muted:#898781;
-    --hairline:#e4e3dc; --grid:#e7e6df; --axis:#c3c2b7;
-    --buy:#2a78d6; --rent:#1baf7a;
-    --buy-soft:rgba(42,120,214,.09); --rent-soft:rgba(27,175,122,.10);
-    --good:#006300; --bad:#c03b3b;
-    --ring:rgba(27,27,24,.10);
-    --accent:#2a78d6;
-    --shadow:0 1px 2px rgba(27,27,24,.04), 0 8px 24px rgba(27,27,24,.05);
-  }
-  @media (prefers-color-scheme: dark){
-    :root{
-      --page:#0d0d0d; --card:#1a1a19; --card2:#222220;
-      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
-      --hairline:#2c2c2a; --grid:#262624; --axis:#383835;
-      --buy:#3987e5; --rent:#199e70;
-      --buy-soft:rgba(57,135,229,.14); --rent-soft:rgba(25,158,112,.16);
-      --good:#0ca30c; --bad:#e66767;
-      --ring:rgba(255,255,255,.10);
-      --accent:#3987e5;
-      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
-    }
+    --page:#0b0a08; --card:#12110d; --card2:#1a1815;
+    --ink:#e7dfd0; --ink2:#9a9284; --muted:#6b6558;
+    --hairline:rgba(231,223,208,.14); --grid:rgba(231,223,208,.08); --axis:rgba(231,223,208,.28);
+    --buy:#cda43e; --rent:#e7dfd0;
+    --buy-soft:rgba(205,164,62,.10); --rent-soft:rgba(231,223,208,.08);
+    --good:#8fae6a; --bad:#c96b5f;
+    --ring:rgba(231,223,208,.14);
+    --accent:#c2a25a; --accent-dim:#8a7440;
+    --shadow:none;
+    --serif:"EB Garamond","Iowan Old Style",Georgia,serif;
+    --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
   }
   *{box-sizing:border-box; margin:0; padding:0}
   html{-webkit-text-size-adjust:100%}
+  ::selection{background:var(--accent); color:var(--page)}
   body{
     background:var(--page); color:var(--ink);
-    font:15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+    font:13px/1.6 var(--mono);
     -webkit-font-smoothing:antialiased;
     padding:clamp(16px,3vw,40px) clamp(14px,3vw,32px) 64px;
   }
   .app{max-width:1180px; margin:0 auto}
 
   /* ---------- header ---------- */
-  header{margin:8px 0 28px}
-  .eyebrow{font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted)}
-  h1{font-size:clamp(26px,4vw,34px); font-weight:700; letter-spacing:-.02em; text-wrap:balance; margin-top:4px}
-  .sub{color:var(--ink2); max-width:56ch; margin-top:6px}
+  header{margin:8px 0 34px; border-bottom:1px solid var(--hairline); padding-bottom:26px}
+  .eyebrow{font-size:11px; font-weight:500; letter-spacing:.22em; text-transform:uppercase; color:var(--accent)}
+  h1{
+    font-family:var(--serif); font-size:clamp(38px,5.5vw,60px); font-weight:500;
+    letter-spacing:-.01em; line-height:1.05; text-wrap:balance; margin-top:12px; color:var(--ink);
+  }
+  h1 em{font-style:italic; color:var(--accent)}
+  .sub{color:var(--ink2); max-width:60ch; margin-top:12px; font-size:12.5px; line-height:1.8}
 
   /* ---------- layout ---------- */
   .layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:24px; align-items:start}
@@ -54,137 +56,152 @@
   /* ---------- control rail ---------- */
   .rail{display:flex; flex-direction:column; gap:14px; position:sticky; top:16px}
   @media (max-width:900px){ .rail{position:static} }
-  .group{background:var(--card); border:1px solid var(--ring); border-radius:14px; padding:16px 16px 8px; box-shadow:var(--shadow)}
-  .group h3{font-size:12px; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:12px}
-  .g-sub{font-size:12px; color:var(--ink2); margin:-8px 0 12px}
+  .group{background:var(--card); border:1px solid var(--ring); padding:16px 16px 8px}
+  .group h3{
+    font-size:10.5px; font-weight:500; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--ink2); margin-bottom:12px; display:flex; gap:10px; align-items:baseline;
+  }
+  .group h3 .g-num{color:var(--accent)}
+  .g-sub{font-size:11px; color:var(--muted); margin:-8px 0 12px; line-height:1.6}
   .param{display:block; padding:2px 0 14px}
   .param-top{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:8px}
-  .param-top .name{font-size:13.5px; color:var(--ink2)}
+  .param-top .name{font-size:11.5px; color:var(--ink2)}
   .val{
-    font-size:13.5px; font-weight:600; color:var(--ink); background:none; border:none;
+    font-size:12.5px; font-weight:500; color:var(--ink); background:none; border:none;
     text-align:right; width:7.5em; border-bottom:1px dashed transparent; border-radius:0; padding:0;
-    font-family:inherit;
+    font-family:var(--mono);
   }
   .val:hover{border-bottom-color:var(--axis)}
   .val:focus{outline:none; border-bottom:1px solid var(--accent)}
-  .subnote{font-size:12px; color:var(--muted); margin-top:-8px; padding-bottom:12px}
-  .breakdown{border-top:1px solid var(--hairline); margin:2px -16px 0; padding:10px 16px 12px; font-size:12.5px; color:var(--ink2)}
-  .breakdown .b-title{font-size:11.5px; font-weight:600; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
+  .subnote{font-size:10.5px; color:var(--muted); margin-top:-8px; padding-bottom:12px}
+  .breakdown{border-top:1px solid var(--hairline); margin:2px -16px 0; padding:10px 16px 12px; font-size:11px; color:var(--ink2)}
+  .breakdown .b-title{font-size:9.5px; font-weight:500; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:6px}
   .breakdown .b-row{display:flex; justify-content:space-between; gap:8px; padding:2px 0}
   .breakdown .b-row .n{font-variant-numeric:tabular-nums}
-  .breakdown .b-total{border-top:1px solid var(--hairline); margin-top:5px; padding-top:6px; font-weight:600; color:var(--ink)}
-  .breakdown .b-note{font-size:11.5px; color:var(--muted); margin-top:6px}
+  .breakdown .b-total{border-top:1px solid var(--hairline); margin-top:5px; padding-top:6px; font-weight:500; color:var(--ink)}
+  .breakdown .b-note{font-size:10.5px; color:var(--muted); margin-top:6px; line-height:1.6}
 
   input[type=range]{
     -webkit-appearance:none; appearance:none; width:100%; height:22px; background:transparent; cursor:pointer; display:block;
   }
   input[type=range]::-webkit-slider-runnable-track{
-    height:4px; border-radius:2px;
+    height:2px; border-radius:0;
     background:linear-gradient(to right, var(--accent) 0 var(--fill,50%), var(--hairline) var(--fill,50%) 100%);
   }
   input[type=range]::-webkit-slider-thumb{
-    -webkit-appearance:none; width:18px; height:18px; border-radius:50%; margin-top:-7px;
-    background:#fff; border:1px solid rgba(27,27,24,.18);
-    box-shadow:0 1px 3px rgba(27,27,24,.25);
+    -webkit-appearance:none; width:16px; height:16px; border-radius:50%; margin-top:-7px;
+    background:var(--ink); border:1px solid rgba(11,10,8,.5);
+    box-shadow:0 0 0 1px rgba(231,223,208,.2);
   }
-  input[type=range]::-moz-range-track{height:4px; border-radius:2px; background:var(--hairline)}
-  input[type=range]::-moz-range-progress{height:4px; border-radius:2px; background:var(--accent)}
-  input[type=range]::-moz-range-thumb{width:17px; height:17px; border-radius:50%; background:#fff; border:1px solid rgba(27,27,24,.18); box-shadow:0 1px 3px rgba(27,27,24,.25)}
-  input[type=range]:focus-visible{outline:2px solid var(--accent); outline-offset:4px; border-radius:4px}
+  input[type=range]::-moz-range-track{height:2px; background:var(--hairline)}
+  input[type=range]::-moz-range-progress{height:2px; background:var(--accent)}
+  input[type=range]::-moz-range-thumb{width:15px; height:15px; border-radius:50%; background:var(--ink); border:1px solid rgba(11,10,8,.5)}
+  input[type=range]:focus-visible{outline:1px solid var(--accent); outline-offset:4px}
 
   .switch{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:4px 0 14px; cursor:pointer}
-  .switch .name{font-size:13.5px; color:var(--ink2)}
+  .switch .name{font-size:11.5px; color:var(--ink2)}
   .switch input{position:absolute; opacity:0; pointer-events:none}
-  .knob{flex:none; width:36px; height:22px; border-radius:11px; background:var(--hairline); position:relative; transition:background .18s}
-  .knob::after{content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(27,27,24,.3); transition:transform .18s}
-  .switch input:checked + .knob{background:var(--accent)}
-  .switch input:checked + .knob::after{transform:translateX(14px)}
-  .switch input:focus-visible + .knob{outline:2px solid var(--accent); outline-offset:2px}
+  .knob{flex:none; width:34px; height:20px; border-radius:10px; background:var(--card2); border:1px solid var(--hairline); position:relative; transition:background .18s, border-color .18s}
+  .knob::after{content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--ink2); transition:transform .18s, background .18s}
+  .switch input:checked + .knob{background:var(--accent-dim); border-color:var(--accent)}
+  .switch input:checked + .knob::after{transform:translateX(14px); background:var(--ink)}
+  .switch input:focus-visible + .knob{outline:1px solid var(--accent); outline-offset:2px}
 
   /* ---------- main column ---------- */
   main{display:flex; flex-direction:column; gap:24px; min-width:0}
 
   /* verdict */
   .verdict{padding:4px 4px 0}
-  .verdict .line{font-size:clamp(19px,2.6vw,24px); font-weight:600; letter-spacing:-.01em; text-wrap:balance}
-  .verdict .line .figure{font-size:clamp(30px,4.4vw,44px); font-weight:700; letter-spacing:-.025em; margin:0 2px}
-  .keydot{display:inline-block; width:10px; height:10px; border-radius:50%; margin:0 6px 1px 2px}
-  .tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:18px}
+  .verdict .line{
+    font-family:var(--serif); font-size:clamp(22px,3vw,30px); font-weight:500;
+    letter-spacing:-.005em; line-height:1.3; text-wrap:balance;
+  }
+  .verdict .line .figure{
+    font-size:clamp(30px,4.2vw,44px); font-weight:500; letter-spacing:-.01em;
+    margin:0 2px; color:var(--accent); font-style:italic;
+  }
+  .keydot{display:inline-block; width:9px; height:9px; border-radius:50%; margin:0 6px 2px 2px}
+  .tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-top:20px}
   @media (max-width:1000px){ .tiles{grid-template-columns:repeat(2,minmax(0,1fr))} }
-  .tile{background:var(--card); border:1px solid var(--ring); border-radius:14px; padding:14px 16px; box-shadow:var(--shadow)}
-  .tile .t-label{font-size:12.5px; color:var(--muted)}
-  .tile .t-value{font-size:22px; font-weight:600; letter-spacing:-.01em; margin-top:2px}
-  .tile .t-sub{font-size:12px; color:var(--ink2); margin-top:2px}
+  .tile{background:var(--card); border:1px solid var(--ring); padding:14px 16px}
+  .tile .t-label{font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted)}
+  .tile .t-value{font-family:var(--serif); font-size:26px; font-weight:500; letter-spacing:-.005em; margin-top:4px}
+  .tile .t-sub{font-size:10.5px; color:var(--ink2); margin-top:3px; line-height:1.5}
   .t-value.pos{color:var(--good)} .t-value.neg{color:var(--bad)}
 
   /* chart card */
-  .chart-card{background:var(--card); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow); padding:18px 18px 12px; min-width:0}
+  .chart-card{background:var(--card); border:1px solid var(--ring); padding:18px 18px 12px; min-width:0; position:relative}
+  .tick{position:absolute; width:12px; height:12px; border:0 solid var(--accent)}
+  .tick-tl{top:-1px; left:-1px; border-top-width:2px; border-left-width:2px}
+  .tick-tr{top:-1px; right:-1px; border-top-width:2px; border-right-width:2px}
+  .tick-bl{bottom:-1px; left:-1px; border-bottom-width:2px; border-left-width:2px}
+  .tick-br{bottom:-1px; right:-1px; border-bottom-width:2px; border-right-width:2px}
   .chart-head{display:flex; flex-wrap:wrap; align-items:center; gap:12px 18px; margin-bottom:6px}
-  .legend{display:flex; gap:16px; align-items:center; font-size:13px; color:var(--ink2)}
-  .lkey{display:inline-block; width:16px; height:0; border-top:2.5px solid; border-radius:2px; margin-right:6px; vertical-align:middle}
+  .legend{display:flex; gap:16px; align-items:center; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink2)}
+  .lkey{display:inline-block; width:16px; height:0; border-top:2px solid; margin-right:6px; vertical-align:middle}
   .spacer{flex:1}
-  .seg{display:inline-flex; background:var(--card2); border:1px solid var(--ring); border-radius:9px; padding:2px}
+  .seg{display:inline-flex; background:var(--card2); border:1px solid var(--ring); padding:2px}
   .seg button{
-    border:none; background:none; font:inherit; font-size:12.5px; font-weight:500; color:var(--ink2);
-    padding:4px 10px; border-radius:7px; cursor:pointer;
+    border:none; background:none; font-family:var(--mono); font-size:10px; letter-spacing:.08em; color:var(--ink2);
+    padding:4px 9px; cursor:pointer; text-transform:uppercase;
   }
-  .seg button[aria-pressed="true"]{background:var(--card); color:var(--ink); font-weight:600; box-shadow:0 1px 2px rgba(27,27,24,.12)}
-  .seg button:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
-  .seg-label{font-size:12px; color:var(--muted); margin-right:-8px}
+  .seg button[aria-pressed="true"]{background:var(--card); color:var(--accent); box-shadow:inset 0 0 0 1px var(--accent-dim)}
+  .seg button:focus-visible{outline:1px solid var(--accent); outline-offset:-1px}
+  .seg-label{font-size:9.5px; letter-spacing:.14em; color:var(--muted); margin-right:-8px; text-transform:uppercase}
 
   .chart-wrap{position:relative; touch-action:pan-y}
   svg{display:block; width:100%; height:auto}
-  .chart-wrap:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:8px}
+  .chart-wrap:focus-visible{outline:1px solid var(--accent); outline-offset:2px}
   .crosshair{position:absolute; top:0; width:1px; background:var(--axis); pointer-events:none; display:none}
-  .hoverdot{position:absolute; width:11px; height:11px; border-radius:50%; border:2px solid var(--card); pointer-events:none; display:none; transform:translate(-50%,-50%); box-shadow:0 0 0 1px rgba(27,27,24,.06)}
+  .hoverdot{position:absolute; width:11px; height:11px; border-radius:50%; border:2px solid var(--card); pointer-events:none; display:none; transform:translate(-50%,-50%)}
   .tooltip{
     position:absolute; pointer-events:none; display:none; z-index:3;
-    background:var(--card); border:1px solid var(--ring); border-radius:10px; box-shadow:var(--shadow);
-    padding:9px 12px; font-size:12.5px; min-width:172px;
+    background:var(--card2); border:1px solid var(--ring);
+    padding:9px 12px; font-size:11px; min-width:176px;
   }
-  .tooltip .tt-when{color:var(--muted); font-size:11.5px; margin-bottom:5px}
+  .tooltip .tt-when{color:var(--muted); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; margin-bottom:6px}
   .tooltip .tt-row{display:flex; align-items:baseline; gap:8px; justify-content:space-between; margin-top:2px}
-  .tooltip .tt-row .v{font-weight:650; font-size:13.5px}
+  .tooltip .tt-row .v{font-weight:600; font-size:12px; font-variant-numeric:tabular-nums}
   .tooltip .tt-name{color:var(--ink2)}
-  .tooltip .tt-delta{margin-top:6px; padding-top:6px; border-top:1px solid var(--hairline); font-weight:600}
-  .chart-caption{font-size:12px; color:var(--muted); margin:8px 2px 4px}
+  .tooltip .tt-delta{margin-top:6px; padding-top:6px; border-top:1px solid var(--hairline); font-weight:500}
+  .chart-caption{font-size:10.5px; color:var(--muted); margin:10px 2px 4px; line-height:1.6; letter-spacing:.02em}
   details.tableview{margin-top:6px; border-top:1px solid var(--hairline)}
-  details.tableview summary{font-size:12.5px; color:var(--ink2); padding:9px 2px; cursor:pointer; list-style:none}
-  details.tableview summary::before{content:"▸ "; color:var(--muted)}
+  details.tableview summary{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink2); padding:10px 2px; cursor:pointer; list-style:none}
+  details.tableview summary::before{content:"▸ "; color:var(--accent)}
   details[open].tableview summary::before{content:"▾ "}
-  details.tableview summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+  details.tableview summary:focus-visible{outline:1px solid var(--accent); outline-offset:-1px}
   .tbl-scroll{overflow-x:auto; padding-bottom:8px}
-  table{border-collapse:collapse; font-size:12.5px; min-width:420px}
-  th,td{text-align:right; padding:5px 14px 5px 0; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--hairline); color:var(--ink2)}
-  th{color:var(--muted); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em}
+  table{border-collapse:collapse; font-size:11px; min-width:420px}
+  th,td{text-align:right; padding:5px 14px 5px 0; font-variant-numeric:tabular-nums; border-bottom:1px solid var(--grid); color:var(--ink2)}
+  th{color:var(--muted); font-weight:500; font-size:9.5px; text-transform:uppercase; letter-spacing:.12em}
   th:first-child, td:first-child{text-align:left}
   td:first-child{color:var(--ink)}
 
   /* sale panel */
-  .sale{background:var(--card); border:1px solid var(--ring); border-radius:16px; box-shadow:var(--shadow); padding:18px}
+  .sale{background:var(--card); border:1px solid var(--ring); padding:18px}
   .sale-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:10px; margin-bottom:14px}
-  .sale-head h2{font-size:16px; font-weight:650; letter-spacing:-.01em}
-  .sale-head .hint{font-size:12px; color:var(--muted)}
+  .sale-head h2{font-family:var(--serif); font-size:24px; font-weight:500; letter-spacing:-.005em}
+  .sale-head .hint{font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
   .sale-grid{display:grid; grid-template-columns:1fr 1fr; gap:14px}
   @media (max-width:760px){ .sale-grid{grid-template-columns:1fr} }
-  .ledger{background:var(--card2); border-radius:12px; padding:14px 16px}
-  .ledger h4{font-size:13px; font-weight:650; margin-bottom:8px; display:flex; align-items:center}
-  .ledger .row{display:flex; justify-content:space-between; gap:12px; font-size:13px; color:var(--ink2); padding:3.5px 0}
+  .ledger{background:var(--card2); border:1px solid var(--grid); padding:14px 16px}
+  .ledger h4{font-size:10px; letter-spacing:.16em; text-transform:uppercase; font-weight:500; margin-bottom:10px; display:flex; align-items:center; color:var(--ink)}
+  .ledger .row{display:flex; justify-content:space-between; gap:12px; font-size:11.5px; color:var(--ink2); padding:3.5px 0}
   .ledger .row .n{font-variant-numeric:tabular-nums}
-  .ledger .total{border-top:1px solid var(--hairline); margin-top:7px; padding-top:8px; font-weight:650; color:var(--ink)}
-  .sale-delta{margin-top:12px; font-size:13.5px; color:var(--ink2)}
-  .sale-delta strong{color:var(--ink)}
+  .ledger .total{border-top:1px solid var(--hairline); margin-top:7px; padding-top:8px; font-weight:600; color:var(--ink)}
+  .sale-delta{margin-top:14px; font-size:12px; color:var(--ink2); line-height:1.7}
+  .sale-delta strong{color:var(--ink); font-weight:600}
 
   /* explainers */
   .cards{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
   @media (max-width:900px){ .cards{grid-template-columns:1fr} }
-  .card{background:var(--card); border:1px solid var(--ring); border-radius:14px; padding:16px; box-shadow:var(--shadow)}
-  .card h4{font-size:13.5px; font-weight:650; margin-bottom:6px}
-  .card p{font-size:13px; color:var(--ink2)}
+  .card{background:var(--card); border:1px solid var(--ring); padding:16px}
+  .card h4{font-size:9.5px; letter-spacing:.16em; text-transform:uppercase; font-weight:500; color:var(--accent); margin-bottom:8px}
+  .card .big{font-family:var(--serif); font-size:22px; font-weight:500; color:var(--ink); letter-spacing:-.005em}
+  .card p{font-size:11.5px; color:var(--ink2); line-height:1.75}
   .card p + p{margin-top:8px}
-  .card .big{font-size:19px; font-weight:650; color:var(--ink); letter-spacing:-.01em}
 
-  .fineprint{font-size:12px; color:var(--muted); max-width:78ch}
+  .fineprint{font-size:10.5px; color:var(--muted); max-width:82ch; line-height:1.75}
 
   @media (prefers-reduced-motion: no-preference){
     .drawin{stroke-dasharray:var(--len); stroke-dashoffset:var(--len); animation:draw 900ms cubic-bezier(.4,0,.2,1) forwards}
@@ -197,8 +214,8 @@
 <body>
 <div class="app">
   <header>
-    <div class="eyebrow">Ontario · GTA edition</div>
-    <h1>Own or rent?</h1>
+    <div class="eyebrow">Plate II · Ontario — GTA</div>
+    <h1>Own <em>or</em> rent?</h1>
     <p class="sub">Both paths start with the same cash. One buys a home; the other invests it and rents.
     Drag the sliders and watch net worth play out, month by month.</p>
   </header>
@@ -213,6 +230,7 @@
       </section>
 
       <section class="chart-card">
+        <i class="tick tick-tl"></i><i class="tick tick-tr"></i><i class="tick tick-bl"></i><i class="tick tick-br"></i>
         <div class="chart-head">
           <div class="legend">
             <span><span class="lkey" style="border-color:var(--buy)"></span>Buy</span>
@@ -405,7 +423,11 @@ function buildRail(){
   for (const g of GROUPS){
     const sec = document.createElement("section");
     sec.className = "group";
-    const h = document.createElement("h3"); h.textContent = g.title; sec.appendChild(h);
+    const h = document.createElement("h3");
+    const gn = document.createElement("span"); gn.className = "g-num";
+    gn.textContent = String(GROUPS.indexOf(g)+1).padStart(2, "0");
+    h.append(gn, document.createTextNode(g.title));
+    sec.appendChild(h);
     if (g.sub){ const gs = document.createElement("p"); gs.className = "g-sub"; gs.textContent = g.sub; sec.appendChild(gs); }
     for (const k in PARAMS){
       const p = PARAMS[k];
@@ -529,7 +551,9 @@ function drawChart(sim){
   const buy = rows.map(sim.buyAt), rentV = rows.map(r => r.rentPort);
   let lo = Math.min(...buy, ...rentV), hi = Math.max(...buy, ...rentV);
   if (hi === lo) hi = lo+1;
+  const rawLo = lo;
   const pad = (hi-lo)*0.06; lo -= pad; hi += pad;
+  if (rawLo >= 0) lo = Math.max(0, lo);
   if (lo > 0 && lo < (hi-lo)*0.4) lo = 0;
   const step = niceStep((hi-lo)/5);
   const y0 = Math.floor(lo/step)*step, y1 = Math.ceil(hi/step)*step;
@@ -672,6 +696,7 @@ function renderVerdict(sim){
   const winner = d >= 0 ? {word:"buying", color:"var(--buy)"} : {word:"renting & investing", color:"var(--rent)"};
   const dot = document.createElement("span"); dot.className = "keydot"; dot.style.background = winner.color;
   const fig = document.createElement("span"); fig.className = "figure"; fig.textContent = fmtC(Math.abs(d));
+  fig.style.color = winner.color;
   line.append(`Over ${state.years} years, `, dot, `${winner.word} comes out ahead by `, fig,
     d>=0 && sim.breakeven ? ` — it takes ${(sim.breakeven/12).toFixed(1).replace(/\.0$/,"")} years to get there.` : ".");
 
