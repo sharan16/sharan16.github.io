@@ -181,6 +181,10 @@
 
   /* ---------- main column ---------- */
   main{display:flex; flex-direction:column; gap:24px; min-width:0}
+  @media (min-width:901px){
+    main{position:sticky; top:16px}  /* the instrument stays put while the controls scroll */
+  }
+  .below{display:flex; flex-direction:column; gap:24px; margin-top:24px}
 
   /* verdict */
   .verdict{padding:4px 4px 0}
@@ -350,23 +354,26 @@
         </details>
       </section>
 
-      <section class="sale">
-        <div class="sale-head">
-          <h2 id="saleTitle">If you sell in year 25</h2>
-          <span class="hint">hover the chart to preview any year · click to pin it</span>
-        </div>
-        <div class="sale-grid" id="saleGrid"></div>
-        <p class="sale-delta" id="saleDelta"></p>
-      </section>
-
-      <section class="cards" id="cards"></section>
-
-      <p class="fineprint" id="finePrint">A model, not advice. It assumes a steady 25-year amortization (Canadian mortgages
-      compound semi-annually and renew every few years at new rates), smooth average returns with no bad-year
-      sequencing, and no income tax on investment gains (a TFSA/RRSP-ish best case — a taxable account would trim
-      the rent line, while a principal residence stays tax-free). Rent covers a comparable home. Maintenance
-      includes condo fees where they apply.</p>
     </main>
+  </div>
+
+  <div class="below">
+    <section class="sale">
+      <div class="sale-head">
+        <h2 id="saleTitle">If you sell in year 25</h2>
+        <span class="hint">hover the chart to preview any year · click to pin it</span>
+      </div>
+      <div class="sale-grid" id="saleGrid"></div>
+      <p class="sale-delta" id="saleDelta"></p>
+    </section>
+
+    <section class="cards" id="cards"></section>
+
+    <p class="fineprint" id="finePrint">A model, not advice. It assumes a steady 25-year amortization (Canadian mortgages
+    compound semi-annually and renew every few years at new rates), smooth average returns with no bad-year
+    sequencing, and no income tax on investment gains (a TFSA/RRSP-ish best case — a taxable account would trim
+    the rent line, while a principal residence stays tax-free). Rent covers a comparable home. Maintenance
+    includes condo fees where they apply.</p>
   </div>
 
   <footer class="pagefoot">
@@ -645,7 +652,9 @@ function niceStep(raw){
   return 10*p;
 }
 function drawChart(sim){
-  const W = Math.max(320, wrap.clientWidth), H = W < 560 ? 300 : 380;
+  const W = Math.max(320, wrap.clientWidth);
+  // on short viewports, shrink so the whole sticky stack (verdict + tiles + chart) fits
+  const H = W < 560 ? 300 : Math.max(260, Math.min(380, window.innerHeight - 420));
   const ML = 8, MR = 84, MT = 18, MB = 30;
   const rows = sim.rows, N = rows.length-1;
   const buy = rows.map(sim.buyAt), rentV = rows.map(r => r.rentPort);
