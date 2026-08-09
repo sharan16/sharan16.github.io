@@ -96,8 +96,20 @@
 		color:var(--ink-soft);
 		margin-bottom:5px;
 	}
-	.field label .req{ color:var(--danger); }
 	.field label .opt{ font-weight:500; color:#9aa89c; }
+	.req-pill{
+		display:inline-block;
+		margin-left:6px;
+		padding:2px 8px;
+		border-radius:999px;
+		background:#fdeeec;
+		color:var(--danger);
+		font-size:10px;
+		font-weight:700;
+		text-transform:uppercase;
+		letter-spacing:.06em;
+		vertical-align:middle;
+	}
 	input[type="text"], input[type="date"], textarea{
 		width:100%;
 		padding:11px 12px;
@@ -114,7 +126,25 @@
 		box-shadow:0 0 0 3px rgba(62,107,37,.12);
 	}
 	textarea{ resize:none; }
-	.row-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+	select.sel{
+		width:100%;
+		padding:11px 36px 11px 12px;
+		border:1.5px solid var(--line);
+		border-radius:10px;
+		background:#fff url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6a5e' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;
+		outline:none;
+		appearance:none;
+		-webkit-appearance:none;
+		min-height:44px;
+		font-family:inherit;
+		font-size:16px;
+		color:var(--ink);
+	}
+	select.sel:focus{
+		border-color:var(--green);
+		box-shadow:0 0 0 3px rgba(62,107,37,.12);
+	}
+	.row-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
 	.invalid{ border-color:var(--danger) !important; box-shadow:0 0 0 3px rgba(179,64,47,.12) !important; }
 	.err-msg{
 		display:none;
@@ -139,11 +169,13 @@
 		display:grid;
 		grid-template-columns:1fr 1fr 1.2fr;
 		gap:8px;
+		align-items:end;
 	}
 	.item-grid-2{
 		display:grid;
 		grid-template-columns:1fr 1.2fr;
 		gap:8px;
+		align-items:end;
 	}
 	.item-row .remove{
 		position:absolute;
@@ -484,7 +516,7 @@
 	<section class="card">
 		<h2>Invoice details</h2>
 		<div class="field">
-			<label for="invNum">Invoice number <span class="req">*</span></label>
+			<label for="invNum">Invoice number <span class="req-pill">Required</span></label>
 			<input type="text" id="invNum" inputmode="numeric" autocomplete="off" placeholder="e.g. 22426">
 			<div class="err-msg" id="invNumErr">Invoice number is required</div>
 		</div>
@@ -494,7 +526,7 @@
 				<input type="date" id="dateIssued">
 			</div>
 			<div class="field">
-				<label for="dueDays">Payment due in <span class="opt">(days, optional)</span></label>
+				<label for="dueDays">Due in <span class="opt">(days)</span></label>
 				<input type="text" id="dueDays" inputmode="numeric" autocomplete="off" placeholder="e.g. 30">
 			</div>
 		</div>
@@ -625,16 +657,20 @@
 	<div class="item-row" data-kind="mat">
 		<button type="button" class="remove" aria-label="Remove row">&times;</button>
 		<div class="field">
+			<label>Saved address <span class="opt">(optional)</span></label>
+			<select class="sel f-saved"><option value="">Choose an address&hellip;</option></select>
+		</div>
+		<div class="field">
 			<label>Description</label>
 			<input type="text" class="f-desc" autocomplete="off" placeholder="e.g. 177 St George">
 		</div>
 		<div class="item-grid-3">
 			<div class="field">
-				<label>Qty <span class="opt">(opt.)</span></label>
+				<label>Qty</label>
 				<input type="text" class="f-qty" inputmode="decimal" autocomplete="off" placeholder="—">
 			</div>
 			<div class="field">
-				<label>Unit price <span class="opt">(opt.)</span></label>
+				<label>Unit price</label>
 				<input type="text" class="f-price" inputmode="decimal" autocomplete="off" placeholder="—">
 			</div>
 			<div class="field">
@@ -694,14 +730,33 @@
 	}
 
 	/* ————— rows ————— */
+	var SAVED_ADDRESSES = ["177 St George", "23 Spring"];
 	function addRow(kind){
 		var tpl = $(kind === "mat" ? "matRowTpl" : "labRowTpl");
 		var node = tpl.content.firstElementChild.cloneNode(true);
+		var sel = node.querySelector(".f-saved");
+		if (sel){
+			SAVED_ADDRESSES.forEach(function(a){
+				var opt = document.createElement("option");
+				opt.value = a;
+				opt.textContent = a;
+				sel.appendChild(opt);
+			});
+		}
 		$(kind === "mat" ? "matRows" : "labRows").appendChild(node);
 		return node;
 	}
-	addRow("mat"); addRow("mat");
+	addRow("mat");
 	addRow("lab");
+
+	/* saved-address selector fills the description */
+	document.addEventListener("change", function(e){
+		if (!e.target.classList.contains("f-saved")) return;
+		if (e.target.value === "") return;
+		var desc = e.target.closest(".item-row").querySelector(".f-desc");
+		desc.value = e.target.value;
+		recalc();
+	});
 
 	$("addMat").addEventListener("click", function(){ addRow("mat").querySelector(".f-desc").focus(); });
 	$("addLab").addEventListener("click", function(){ addRow("lab").querySelector(".f-desc").focus(); });
@@ -723,6 +778,10 @@
 			if (!isNaN(q) && !isNaN(p)){
 				row.querySelector(".f-amt").value = (Math.round(q * p * 100) / 100).toFixed(2);
 			}
+		}
+		if (row && e.target.classList.contains("f-desc")){
+			var sel = row.querySelector(".f-saved");
+			if (sel && sel.value !== "" && sel.value !== e.target.value) sel.value = "";
 		}
 		if (e.target.id === "invNum" && e.target.value.trim() !== ""){
 			e.target.classList.remove("invalid");
