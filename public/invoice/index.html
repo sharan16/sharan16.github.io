@@ -126,23 +126,35 @@
 		box-shadow:0 0 0 3px rgba(62,107,37,.12);
 	}
 	textarea{ resize:none; }
-	select.sel{
-		width:100%;
-		padding:11px 36px 11px 12px;
-		border:1.5px solid var(--line);
-		border-radius:10px;
-		background:#fff url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235c6a5e' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center;
-		outline:none;
-		appearance:none;
-		-webkit-appearance:none;
-		min-height:44px;
-		font-family:inherit;
-		font-size:16px;
-		color:var(--ink);
+	.chip-row{
+		display:flex;
+		flex-wrap:wrap;
+		align-items:center;
+		gap:6px;
+		margin-top:8px;
 	}
-	select.sel:focus{
+	.chip-row .chip-lbl{
+		font-size:11.5px;
+		font-weight:600;
+		color:#9aa89c;
+		margin-right:2px;
+	}
+	.chip{
+		border:1.5px solid var(--line);
+		border-radius:999px;
+		background:#fff;
+		color:var(--green);
+		font-size:13px;
+		font-weight:600;
+		padding:6px 12px;
+		min-height:32px;
+		cursor:pointer;
+	}
+	.chip:active{ background:var(--mint); }
+	.chip.selected{
+		background:var(--mint);
 		border-color:var(--green);
-		box-shadow:0 0 0 3px rgba(62,107,37,.12);
+		color:var(--green-deep);
 	}
 	.row-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; align-items:end; }
 	.invalid{ border-color:var(--danger) !important; box-shadow:0 0 0 3px rgba(179,64,47,.12) !important; }
@@ -657,12 +669,9 @@
 	<div class="item-row" data-kind="mat">
 		<button type="button" class="remove" aria-label="Remove row">&times;</button>
 		<div class="field">
-			<label>Saved address <span class="opt">(optional)</span></label>
-			<select class="sel f-saved"><option value="">Choose an address&hellip;</option></select>
-		</div>
-		<div class="field">
 			<label>Description</label>
 			<input type="text" class="f-desc" autocomplete="off" placeholder="e.g. 177 St George">
+			<div class="chip-row"><span class="chip-lbl">Saved:</span></div>
 		</div>
 		<div class="item-grid-3">
 			<div class="field">
@@ -734,13 +743,14 @@
 	function addRow(kind){
 		var tpl = $(kind === "mat" ? "matRowTpl" : "labRowTpl");
 		var node = tpl.content.firstElementChild.cloneNode(true);
-		var sel = node.querySelector(".f-saved");
-		if (sel){
+		var chipRow = node.querySelector(".chip-row");
+		if (chipRow){
 			SAVED_ADDRESSES.forEach(function(a){
-				var opt = document.createElement("option");
-				opt.value = a;
-				opt.textContent = a;
-				sel.appendChild(opt);
+				var chip = document.createElement("button");
+				chip.type = "button";
+				chip.className = "chip";
+				chip.textContent = a;
+				chipRow.appendChild(chip);
 			});
 		}
 		$(kind === "mat" ? "matRows" : "labRows").appendChild(node);
@@ -749,12 +759,20 @@
 	addRow("mat");
 	addRow("lab");
 
-	/* saved-address selector fills the description */
-	document.addEventListener("change", function(e){
-		if (!e.target.classList.contains("f-saved")) return;
-		if (e.target.value === "") return;
-		var desc = e.target.closest(".item-row").querySelector(".f-desc");
-		desc.value = e.target.value;
+	function syncChips(row){
+		var desc = row.querySelector(".f-desc");
+		row.querySelectorAll(".chip").forEach(function(c){
+			c.classList.toggle("selected", c.textContent === desc.value.trim());
+		});
+	}
+
+	/* tapping a saved-address chip fills the description */
+	document.addEventListener("click", function(e){
+		var chip = e.target.closest(".chip");
+		if (!chip) return;
+		var row = chip.closest(".item-row");
+		row.querySelector(".f-desc").value = chip.textContent;
+		syncChips(row);
 		recalc();
 	});
 
@@ -779,10 +797,7 @@
 				row.querySelector(".f-amt").value = (Math.round(q * p * 100) / 100).toFixed(2);
 			}
 		}
-		if (row && e.target.classList.contains("f-desc")){
-			var sel = row.querySelector(".f-saved");
-			if (sel && sel.value !== "" && sel.value !== e.target.value) sel.value = "";
-		}
+		if (row && e.target.classList.contains("f-desc")) syncChips(row);
 		if (e.target.id === "invNum" && e.target.value.trim() !== ""){
 			e.target.classList.remove("invalid");
 			$("invNumErr").classList.remove("show");
