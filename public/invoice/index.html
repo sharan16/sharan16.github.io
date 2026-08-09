@@ -1183,30 +1183,94 @@
 	$("editBtn").addEventListener("click", closePreview);
 	$("printBtn").addEventListener("click", function(){
 		renderSheet();
-		saveInvoiceNumber();
+		saveSession();
 		window.print();
 	});
 
-	/* ————— invoice number sync (JSONBin) ————— */
+	/* ————— session sync (JSONBin): load on open, save on print ————— */
 	var BIN_URL = "https://api.jsonbin.io/v3/b/6a78ddb1da38895dfece27b7";
 	var BIN_KEY = "$2a$10$oM82Cb533o2wLPx.zU2g3OJbgdaD0YRGZC4z.88JDj/Z8qFbr9/PS";
+
+	function collectState(){
+		return {
+			dueDays: $("dueDays").value,
+			targetTotal: $("targetTotal").value,
+			billTo: { name: $("btName").value, addr: $("btAddr").value, phone: $("btPhone").value },
+			mats: rowsOf("mat").map(function(r){
+				return {
+					desc: r.querySelector(".f-desc").value,
+					qty: r.querySelector(".f-qty").value,
+					price: r.querySelector(".f-price").value,
+					amt: r.querySelector(".f-amt").value
+				};
+			}),
+			labs: rowsOf("lab").map(function(r){
+				return {
+					date: r.querySelector(".f-date").value,
+					desc: r.querySelector(".f-desc").value,
+					amt: r.querySelector(".f-amt").value
+				};
+			})
+		};
+	}
+	function restoreState(s){
+		if (!s) return;
+		if (s.dueDays != null) $("dueDays").value = s.dueDays;
+		if (s.targetTotal != null) $("targetTotal").value = s.targetTotal;
+		if (s.billTo){
+			if (s.billTo.name != null) $("btName").value = s.billTo.name;
+			if (s.billTo.addr != null) $("btAddr").value = s.billTo.addr;
+			if (s.billTo.phone != null) $("btPhone").value = s.billTo.phone;
+		}
+		if (s.mats && s.mats.length){
+			$("matRows").innerHTML = "";
+			s.mats.forEach(function(m){
+				var row = addRow("mat");
+				row.querySelector(".f-desc").value = m.desc || "";
+				row.querySelector(".f-qty").value = m.qty || "";
+				row.querySelector(".f-price").value = m.price || "";
+				row.querySelector(".f-amt").value = m.amt || "";
+				syncChips(row);
+			});
+		}
+		if (s.labs && s.labs.length){
+			$("labRows").innerHTML = "";
+			s.labs.forEach(function(l){
+				var row = addRow("lab");
+				row.querySelector(".f-date").value = l.date || "";
+				row.querySelector(".f-desc").value = l.desc || "";
+				row.querySelector(".f-amt").value = l.amt || "";
+			});
+		}
+		var pool = poolCents();
+		if (pool != null){
+			$("targetHint").textContent = "= " + money(pool / 100) + " before HST — items will split from this";
+			$("targetHint").classList.add("show");
+		}
+		recalc();
+	}
+
 	fetch(BIN_URL + "/latest", { headers: { "X-Master-Key": BIN_KEY } })
 		.then(function(r){ return r.json(); })
 		.then(function(d){
-			var next = d && d.record && d.record.next;
-			if (next && $("invNum").value.trim() === ""){
-				$("invNum").value = next;
+			var rec = d && d.record;
+			if (!rec) return;
+			restoreState(rec.saved);
+			if (rec.next && $("invNum").value.trim() === ""){
+				$("invNum").value = rec.next;
 				$("invNum").dispatchEvent(new Event("input", { bubbles:true }));
 			}
 		})
-		.catch(function(){ /* offline — dad types the number himself */ });
-	function saveInvoiceNumber(){
+		.catch(function(){ /* offline — dad fills everything himself */ });
+
+	function saveSession(){
 		var n = parseInt($("invNum").value.replace(/\D/g, ""), 10);
-		if (isNaN(n)) return;
+		var body = { saved: collectState() };
+		if (!isNaN(n)) body.next = n + 1;
 		fetch(BIN_URL, {
 			method: "PUT",
 			headers: { "Content-Type": "application/json", "X-Master-Key": BIN_KEY },
-			body: JSON.stringify({ next: n + 1 })
+			body: JSON.stringify(body)
 		}).catch(function(){});
 	}
 	window.addEventListener("resize", function(){
