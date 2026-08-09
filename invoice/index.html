@@ -207,6 +207,21 @@
 		justify-content:center;
 	}
 	.item-row .remove:active{ background:#fdeeec; color:var(--danger); }
+	.item-row .clear-row{
+		position:absolute;
+		top:8px;
+		right:42px;
+		height:30px;
+		padding:0 10px;
+		border:none;
+		border-radius:8px;
+		background:transparent;
+		color:#9aa89c;
+		font-size:12.5px;
+		font-weight:600;
+		cursor:pointer;
+	}
+	.item-row .clear-row:active{ background:var(--mint); color:var(--green-deep); }
 	.add-btn{
 		width:100%;
 		padding:12px;
@@ -667,6 +682,7 @@
 
 <template id="matRowTpl">
 	<div class="item-row" data-kind="mat">
+		<button type="button" class="clear-row">Clear</button>
 		<button type="button" class="remove" aria-label="Remove row">&times;</button>
 		<div class="field">
 			<label>Description</label>
@@ -692,6 +708,7 @@
 
 <template id="labRowTpl">
 	<div class="item-row" data-kind="lab">
+		<button type="button" class="clear-row">Clear</button>
 		<button type="button" class="remove" aria-label="Remove row">&times;</button>
 		<div class="field">
 			<label>Description</label>
@@ -780,6 +797,14 @@
 	$("addLab").addEventListener("click", function(){ addRow("lab").querySelector(".f-desc").focus(); });
 
 	document.addEventListener("click", function(e){
+		var clearBtn = e.target.closest(".clear-row");
+		if (clearBtn){
+			var row = clearBtn.closest(".item-row");
+			row.querySelectorAll("input").forEach(function(i){ i.value = ""; });
+			syncChips(row);
+			recalc();
+			return;
+		}
 		var btn = e.target.closest(".remove");
 		if (!btn) return;
 		btn.closest(".item-row").remove();
