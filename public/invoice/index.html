@@ -166,6 +166,14 @@
 		margin-top:5px;
 	}
 	.err-msg.show{ display:block; }
+	.hint{
+		display:none;
+		font-size:12.5px;
+		font-weight:500;
+		color:var(--ink-soft);
+		margin-top:5px;
+	}
+	.hint.show{ display:block; }
 
 	/* ————— line-item rows ————— */
 	.item-row{
@@ -267,6 +275,63 @@
 		color:var(--ink);
 	}
 	.totals-card .trow.grand span:last-child{ font-weight:800; }
+	.target-note{
+		display:none;
+		font-size:12.5px;
+		font-weight:600;
+		text-align:right;
+		margin-top:8px;
+	}
+	.target-note.ok{ display:block; color:var(--green); }
+	.target-note.off{ display:block; color:#a06a1f; }
+
+	/* ————— split confirmation dialog ————— */
+	.modal-backdrop{
+		display:none;
+		position:fixed;
+		inset:0;
+		z-index:200;
+		background:rgba(24,32,24,.45);
+		padding:16px;
+		align-items:center;
+		justify-content:center;
+	}
+	.modal-backdrop.open{ display:flex; }
+	.modal{
+		background:#fff;
+		border-radius:16px;
+		padding:20px;
+		width:100%;
+		max-width:420px;
+		box-shadow:0 10px 40px rgba(0,0,0,.25);
+	}
+	.modal h3{ margin:0 0 6px; font-size:17px; font-weight:800; }
+	.modal-sub{ margin:0 0 12px; font-size:13.5px; color:var(--ink-soft); }
+	.split-list{
+		border:1px solid var(--line);
+		border-radius:10px;
+		overflow:hidden;
+		margin-bottom:16px;
+	}
+	.srow{
+		display:flex;
+		justify-content:space-between;
+		padding:9px 12px;
+		font-size:14px;
+		border-top:1px solid var(--line);
+		font-variant-numeric:tabular-nums;
+	}
+	.srow:first-child{ border-top:none; }
+	.srow .sname{
+		color:var(--ink-soft);
+		overflow:hidden;
+		text-overflow:ellipsis;
+		white-space:nowrap;
+		margin-right:10px;
+	}
+	.srow .samt{ font-weight:700; }
+	.modal-btns{ display:flex; gap:10px; }
+	.modal-btns .primary-btn{ flex:1; }
 
 	/* ————— sticky action bar ————— */
 	.action-bar{
@@ -557,6 +622,11 @@
 				<input type="text" id="dueDays" inputmode="numeric" autocomplete="off" placeholder="e.g. 30">
 			</div>
 		</div>
+		<div class="field" style="margin-top:12px;">
+			<label for="targetTotal">Invoice total <span class="opt">(incl. HST)</span></label>
+			<input type="text" id="targetTotal" inputmode="decimal" autocomplete="off" placeholder="e.g. 4372.23">
+			<div class="hint" id="targetHint"></div>
+		</div>
 	</section>
 
 	<section class="card">
@@ -596,7 +666,20 @@
 		<div class="trow"><span>Subtotal</span><span id="sumSub">$0.00</span></div>
 		<div class="trow"><span>HST (13%)</span><span id="sumHst">$0.00</span></div>
 		<div class="trow grand"><span>Total</span><span id="sumTotal">$0.00</span></div>
+		<div class="target-note" id="targetNote"></div>
 	</section>
+</div>
+
+<div class="modal-backdrop" id="splitModal">
+	<div class="modal">
+		<h3 id="splitTitle"></h3>
+		<p class="modal-sub">The before-HST amount will be divided across your items like this:</p>
+		<div class="split-list" id="splitList"></div>
+		<div class="modal-btns">
+			<button type="button" class="ghost-btn" id="splitNo">No, keep</button>
+			<button type="button" class="primary-btn" id="splitYes">Yes, split</button>
+		</div>
+	</div>
 </div>
 
 <div class="action-bar">
@@ -793,22 +876,122 @@
 		recalc();
 	});
 
-	$("addMat").addEventListener("click", function(){ addRow("mat").querySelector(".f-desc").focus(); });
-	$("addLab").addEventListener("click", function(){ addRow("lab").querySelector(".f-desc").focus(); });
+	$("addMat").addEventListener("click", function(){
+		var row = addRow("mat");
+		if (!maybeOfferSplit(row)) row.querySelector(".f-desc").focus();
+	});
+	$("addLab").addEventListener("click", function(){
+		var row = addRow("lab");
+		if (!maybeOfferSplit(row)) row.querySelector(".f-desc").focus();
+	});
+
+	/* ————— target total & even split ————— */
+	function poolCents(){
+		var t = parseNum($("targetTotal").value);
+		if (isNaN(t) || t <= 0) return null;
+		return Math.round(t / 1.13 * 100);
+	}
+	function allRows(){
+		return Array.prototype.slice.call(document.querySelectorAll(".item-row"));
+	}
+	function rowLabel(row, idx){
+		var desc = row.querySelector(".f-desc").value.trim();
+		if (desc) return desc;
+		return (row.dataset.kind === "mat" ? "Material" : "Labor") + " item " + (idx + 1);
+	}
+	function splitCents(pool, n){
+		var base = Math.floor(pool / n);
+		var rem = pool - base * n;
+		var out = [];
+		for (var i = 0; i < n; i++) out.push(base + (i >= n - rem ? 1 : 0));
+		return out;
+	}
+	function setAmount(row, cents){
+		var amt = row.querySelector(".f-amt");
+		amt.value = (cents / 100).toFixed(2);
+		amt.dataset.auto = "1";
+	}
+
+	var pendingSplit = null;
+	function showSplitDialog(parts){
+		var pool = poolCents();
+		var amounts = splitCents(pool, parts.length);
+		pendingSplit = { parts: parts, amounts: amounts };
+		$("splitTitle").textContent = "Split " + money(pool / 100) + " evenly?";
+		$("splitList").innerHTML = parts.map(function(r, i){
+			return "<div class='srow'><span class='sname'>" + esc(rowLabel(r, i)) +
+				"</span><span class='samt'>" + money(amounts[i] / 100) + "</span></div>";
+		}).join("");
+		$("splitModal").classList.add("open");
+	}
+	function maybeOfferSplit(newRow){
+		var pool = poolCents();
+		if (pool == null) return false;
+		var parts = allRows().filter(function(r){ return r === newRow || rowFilled(r); });
+		if (parts.length < 2){
+			setAmount(newRow, pool);
+			recalc();
+			return false;
+		}
+		showSplitDialog(parts);
+		return true;
+	}
+	function offerResplit(){
+		var pool = poolCents();
+		if (pool == null) return;
+		var parts = allRows().filter(rowFilled);
+		if (!parts.length) return;
+		showSplitDialog(parts);
+	}
+	$("splitYes").addEventListener("click", function(){
+		if (pendingSplit){
+			pendingSplit.parts.forEach(function(r, i){ setAmount(r, pendingSplit.amounts[i]); });
+			pendingSplit = null;
+		}
+		$("splitModal").classList.remove("open");
+		recalc();
+	});
+	$("splitNo").addEventListener("click", function(){
+		pendingSplit = null;
+		$("splitModal").classList.remove("open");
+	});
+
+	$("targetTotal").addEventListener("input", function(){
+		var pool = poolCents();
+		var hint = $("targetHint");
+		if (pool != null){
+			hint.textContent = "= " + money(pool / 100) + " before HST — items will split from this";
+			hint.classList.add("show");
+			var rows = allRows();
+			var withAmt = rows.filter(function(r){ return r.querySelector(".f-amt").value.trim() !== ""; });
+			if (withAmt.length === 0 && rows.length){
+				setAmount(rows[0], pool);
+			} else if (withAmt.length === 1 && withAmt[0].querySelector(".f-amt").dataset.auto === "1"){
+				setAmount(withAmt[0], pool);
+			}
+		} else {
+			hint.classList.remove("show");
+		}
+	});
 
 	document.addEventListener("click", function(e){
 		var clearBtn = e.target.closest(".clear-row");
 		if (clearBtn){
 			var row = clearBtn.closest(".item-row");
+			var hadContent = rowFilled(row);
 			row.querySelectorAll("input").forEach(function(i){ i.value = ""; });
 			syncChips(row);
 			recalc();
+			if (hadContent) offerResplit();
 			return;
 		}
 		var btn = e.target.closest(".remove");
 		if (!btn) return;
-		btn.closest(".item-row").remove();
+		var removed = btn.closest(".item-row");
+		var wasFilled = rowFilled(removed);
+		removed.remove();
 		recalc();
+		if (wasFilled) offerResplit();
 	});
 
 	/* qty × unit price auto-fills amount */
@@ -823,6 +1006,7 @@
 			}
 		}
 		if (row && e.target.classList.contains("f-desc")) syncChips(row);
+		if (e.target.classList.contains("f-amt")) delete e.target.dataset.auto;
 		if (e.target.id === "invNum" && e.target.value.trim() !== ""){
 			e.target.classList.remove("invalid");
 			$("invNumErr").classList.remove("show");
@@ -859,6 +1043,19 @@
 		$("sumHst").textContent = money(hst);
 		$("sumTotal").textContent = money(total);
 		$("barTotal").textContent = money(total);
+		var note = $("targetNote");
+		var tv = parseNum($("targetTotal").value);
+		if (!isNaN(tv) && tv > 0){
+			if (Math.abs(total - tv) <= 0.011){
+				note.textContent = "Matches invoice total of " + money(tv) + " ✓";
+				note.className = "target-note ok";
+			} else {
+				note.textContent = "Off from invoice total " + money(tv) + " by " + money(Math.abs(total - tv));
+				note.className = "target-note off";
+			}
+		} else {
+			note.className = "target-note";
+		}
 		return { mat:mat, lab:lab, sub:sub, hst:hst, total:total };
 	}
 	recalc();
