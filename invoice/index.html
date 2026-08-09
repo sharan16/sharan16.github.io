@@ -868,7 +868,7 @@
 		return node;
 	}
 	addRow("mat");
-	addRow("lab");
+	addRow("mat");
 
 	function syncChips(row){
 		var desc = row.querySelector(".f-desc");
@@ -974,11 +974,13 @@
 			hint.textContent = "= " + money(pool / 100) + " before HST — items will split from this";
 			hint.classList.add("show");
 			var rows = allRows();
-			var withAmt = rows.filter(function(r){ return r.querySelector(".f-amt").value.trim() !== ""; });
-			if (withAmt.length === 0 && rows.length){
-				setAmount(rows[0], pool);
-			} else if (withAmt.length === 1 && withAmt[0].querySelector(".f-amt").dataset.auto === "1"){
-				setAmount(withAmt[0], pool);
+			var manual = rows.filter(function(r){
+				var a = r.querySelector(".f-amt");
+				return a.value.trim() !== "" && a.dataset.auto !== "1";
+			});
+			if (rows.length && !manual.length){
+				var amounts = splitCents(pool, rows.length);
+				rows.forEach(function(r, i){ setAmount(r, amounts[i]); });
 			}
 		} else {
 			hint.classList.remove("show");
@@ -1181,8 +1183,32 @@
 	$("editBtn").addEventListener("click", closePreview);
 	$("printBtn").addEventListener("click", function(){
 		renderSheet();
+		saveInvoiceNumber();
 		window.print();
 	});
+
+	/* ————— invoice number sync (JSONBin) ————— */
+	var BIN_URL = "https://api.jsonbin.io/v3/b/6a78ddb1da38895dfece27b7";
+	var BIN_KEY = "$2a$10$oM82Cb533o2wLPx.zU2g3OJbgdaD0YRGZC4z.88JDj/Z8qFbr9/PS";
+	fetch(BIN_URL + "/latest", { headers: { "X-Master-Key": BIN_KEY } })
+		.then(function(r){ return r.json(); })
+		.then(function(d){
+			var next = d && d.record && d.record.next;
+			if (next && $("invNum").value.trim() === ""){
+				$("invNum").value = next;
+				$("invNum").dispatchEvent(new Event("input", { bubbles:true }));
+			}
+		})
+		.catch(function(){ /* offline — dad types the number himself */ });
+	function saveInvoiceNumber(){
+		var n = parseInt($("invNum").value.replace(/\D/g, ""), 10);
+		if (isNaN(n)) return;
+		fetch(BIN_URL, {
+			method: "PUT",
+			headers: { "Content-Type": "application/json", "X-Master-Key": BIN_KEY },
+			body: JSON.stringify({ next: n + 1 })
+		}).catch(function(){});
+	}
 	window.addEventListener("resize", function(){
 		if ($("overlay").classList.contains("open")) fitSheet();
 	});
