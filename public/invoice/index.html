@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SS Greenline — Invoice</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-title" content="Invoice">
+<meta name="theme-color" content="#f4f8f5">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+	/* ————————————————————————————————
+	   SS GREENLINE — INVOICE MAKER
+	   mint ground · forest ink · clean sheet
+	   ———————————————————————————————— */
+	:root{
+		--green:#3e6b25;
+		--green-deep:#2c4d1a;
+		--mint:#e4f2e9;
+		--mint-soft:#f4f8f5;
+		--ink:#182018;
+		--ink-soft:#5c6a5e;
+		--line:#d7e2d9;
+		--card:#ffffff;
+		--danger:#b3402f;
+		--radius:14px;
+	}
+	*{ box-sizing:border-box; }
+	html{ -webkit-text-size-adjust:100%; }
+	body{
+		margin:0;
+		font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+		background:var(--mint-soft);
+		color:var(--ink);
+		line-height:1.45;
+	}
+	button{ font-family:inherit; }
+	input, textarea{
+		font-family:inherit;
+		font-size:16px; /* prevents iOS zoom-on-focus */
+		color:var(--ink);
+	}
+
+	/* ————— app shell ————— */
+	.app{
+		max-width:640px;
+		margin:0 auto;
+		padding:0 16px calc(96px + env(safe-area-inset-bottom));
+	}
+	.app-header{
+		padding:22px 2px 14px;
+		display:flex;
+		align-items:baseline;
+		justify-content:space-between;
+		gap:12px;
+	}
+	.app-header h1{
+		margin:0;
+		font-size:20px;
+		font-weight:800;
+		letter-spacing:-.02em;
+		color:var(--green-deep);
+	}
+	.app-header .sub{
+		font-size:13px;
+		color:var(--ink-soft);
+		font-weight:500;
+		white-space:nowrap;
+	}
+
+	/* ————— cards & fields ————— */
+	.card{
+		background:var(--card);
+		border:1px solid var(--line);
+		border-radius:var(--radius);
+		padding:16px;
+		margin-bottom:14px;
+	}
+	.card h2{
+		margin:0 0 12px;
+		font-size:12px;
+		font-weight:700;
+		text-transform:uppercase;
+		letter-spacing:.09em;
+		color:var(--green);
+	}
+	.field{ margin-bottom:12px; }
+	.field:last-child{ margin-bottom:0; }
+	.field label{
+		display:block;
+		font-size:12.5px;
+		font-weight:600;
+		color:var(--ink-soft);
+		margin-bottom:5px;
+	}
+	.field label .req{ color:var(--danger); }
+	.field label .opt{ font-weight:500; color:#9aa89c; }
+	input[type="text"], input[type="date"], textarea{
+		width:100%;
+		padding:11px 12px;
+		border:1.5px solid var(--line);
+		border-radius:10px;
+		background:#fff;
+		outline:none;
+		appearance:none;
+		-webkit-appearance:none;
+		min-height:44px;
+	}
+	input:focus, textarea:focus{
+		border-color:var(--green);
+		box-shadow:0 0 0 3px rgba(62,107,37,.12);
+	}
+	textarea{ resize:none; }
+	.row-2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+	.invalid{ border-color:var(--danger) !important; box-shadow:0 0 0 3px rgba(179,64,47,.12) !important; }
+	.err-msg{
+		display:none;
+		font-size:12.5px;
+		color:var(--danger);
+		font-weight:600;
+		margin-top:5px;
+	}
+	.err-msg.show{ display:block; }
+
+	/* ————— line-item rows ————— */
+	.item-row{
+		border:1px solid var(--line);
+		border-radius:12px;
+		padding:12px;
+		margin-bottom:10px;
+		background:#fbfdfb;
+		position:relative;
+	}
+	.item-row .field{ margin-bottom:10px; }
+	.item-grid-3{
+		display:grid;
+		grid-template-columns:1fr 1fr 1.2fr;
+		gap:8px;
+	}
+	.item-grid-2{
+		display:grid;
+		grid-template-columns:1fr 1.2fr;
+		gap:8px;
+	}
+	.item-row .remove{
+		position:absolute;
+		top:8px;
+		right:8px;
+		width:30px;
+		height:30px;
+		border:none;
+		border-radius:8px;
+		background:transparent;
+		color:#9aa89c;
+		font-size:20px;
+		line-height:1;
+		cursor:pointer;
+		display:flex;
+		align-items:center;
+		justify-content:center;
+	}
+	.item-row .remove:active{ background:#fdeeec; color:var(--danger); }
+	.add-btn{
+		width:100%;
+		padding:12px;
+		border:1.5px dashed var(--green);
+		border-radius:10px;
+		background:transparent;
+		color:var(--green);
+		font-size:14.5px;
+		font-weight:700;
+		cursor:pointer;
+		min-height:46px;
+	}
+	.add-btn:active{ background:var(--mint); }
+	.section-total{
+		display:flex;
+		justify-content:space-between;
+		align-items:baseline;
+		margin-top:12px;
+		padding-top:12px;
+		border-top:1px solid var(--line);
+		font-size:14px;
+		font-weight:600;
+		color:var(--ink-soft);
+	}
+	.section-total b{ font-size:16px; color:var(--ink); font-variant-numeric:tabular-nums; }
+
+	/* ————— totals card ————— */
+	.totals-card .trow{
+		display:flex;
+		justify-content:space-between;
+		padding:7px 0;
+		font-size:14.5px;
+		color:var(--ink-soft);
+		font-variant-numeric:tabular-nums;
+	}
+	.totals-card .trow span:last-child{ font-weight:600; color:var(--ink); }
+	.totals-card .trow.grand{
+		margin-top:6px;
+		padding-top:13px;
+		border-top:2px solid var(--ink);
+		font-size:17px;
+		font-weight:800;
+		color:var(--ink);
+	}
+	.totals-card .trow.grand span:last-child{ font-weight:800; }
+
+	/* ————— sticky action bar ————— */
+	.action-bar{
+		position:fixed;
+		left:0; right:0; bottom:0;
+		background:rgba(255,255,255,.92);
+		backdrop-filter:blur(12px);
+		-webkit-backdrop-filter:blur(12px);
+		border-top:1px solid var(--line);
+		padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+		z-index:50;
+	}
+	.action-bar-inner{
+		max-width:640px;
+		margin:0 auto;
+		display:flex;
+		align-items:center;
+		gap:14px;
+	}
+	.action-bar .live-total{ flex:1; min-width:0; }
+	.action-bar .live-total .lbl{
+		font-size:11px;
+		font-weight:700;
+		text-transform:uppercase;
+		letter-spacing:.08em;
+		color:var(--ink-soft);
+	}
+	.action-bar .live-total .amt{
+		font-size:20px;
+		font-weight:800;
+		font-variant-numeric:tabular-nums;
+		letter-spacing:-.01em;
+	}
+	.primary-btn{
+		border:none;
+		border-radius:12px;
+		background:var(--green);
+		color:#fff;
+		font-size:16px;
+		font-weight:700;
+		padding:14px 26px;
+		cursor:pointer;
+		min-height:50px;
+	}
+	.primary-btn:active{ background:var(--green-deep); }
+	.ghost-btn{
+		border:1.5px solid var(--line);
+		border-radius:12px;
+		background:#fff;
+		color:var(--ink);
+		font-size:16px;
+		font-weight:600;
+		padding:14px 20px;
+		cursor:pointer;
+		min-height:50px;
+	}
+
+	/* ————— preview overlay ————— */
+	.overlay{
+		display:none;
+		position:fixed;
+		inset:0;
+		z-index:100;
+		background:#6a756c;
+		overflow-y:auto;
+		-webkit-overflow-scrolling:touch;
+	}
+	.overlay.open{ display:block; }
+	.sheet-wrap{
+		padding:16px 12px calc(100px + env(safe-area-inset-bottom));
+	}
+	.sheet-scale{ transform-origin:top left; }
+
+	/* ————— THE INVOICE SHEET ————— */
+	.sheet{
+		width:780px;
+		background:#fff;
+		color:#1c231d;
+		padding:44px 48px 56px;
+		box-shadow:0 6px 30px rgba(0,0,0,.28);
+		font-size:13.5px;
+	}
+	.s-head{
+		display:flex;
+		background:var(--mint);
+		border-radius:6px;
+		overflow:hidden;
+	}
+	.s-head .brand{
+		flex:1.1;
+		padding:30px 26px;
+		display:flex;
+		align-items:center;
+	}
+	.s-head .brand h1{
+		margin:0;
+		font-size:31px;
+		font-weight:800;
+		letter-spacing:-.015em;
+		color:var(--green);
+	}
+	.s-head .contact{
+		flex:1;
+		padding:22px 26px;
+		border-left:2px solid #fff;
+		display:grid;
+		grid-template-columns:1fr 1fr;
+		gap:10px 18px;
+		align-content:center;
+		font-size:11.5px;
+		line-height:1.5;
+	}
+	.s-head .contact .lbl{
+		font-weight:700;
+		color:var(--green-deep);
+		text-transform:uppercase;
+		font-size:9.5px;
+		letter-spacing:.07em;
+	}
+	.s-meta{
+		display:flex;
+		gap:36px;
+		margin:26px 2px 6px;
+	}
+	.s-meta .col{ flex:1; }
+	.s-meta h3{
+		margin:0 0 10px;
+		font-size:11px;
+		font-weight:800;
+		letter-spacing:.1em;
+		text-transform:uppercase;
+		color:var(--green);
+	}
+	.s-meta .kv{
+		display:flex;
+		gap:8px;
+		padding:5.5px 0;
+		border-bottom:1px solid #e8eee9;
+		font-size:12.5px;
+	}
+	.s-meta .kv .k{ color:#6c786e; min-width:112px; }
+	.s-meta .kv .v{ font-weight:600; }
+	.s-section-title{
+		text-align:center;
+		font-size:13px;
+		font-weight:800;
+		letter-spacing:.12em;
+		text-transform:uppercase;
+		color:#2b3529;
+		margin:30px 0 10px;
+	}
+	table.s-table{
+		width:100%;
+		border-collapse:collapse;
+		font-size:12.5px;
+	}
+	.s-table th{
+		background:var(--mint);
+		color:#2b3529;
+		font-weight:700;
+		text-align:left;
+		padding:8px 10px;
+		border:1px solid #cfdfd3;
+		font-size:11.5px;
+	}
+	.s-table td{
+		padding:8px 10px;
+		border:1px solid #dfe8e1;
+		vertical-align:top;
+	}
+	.s-table tr:nth-child(even) td{ background:#f7faf7; }
+	.s-table .num{ text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+	.s-table tfoot td{
+		background:var(--mint) !important;
+		font-weight:700;
+		border:1px solid #cfdfd3;
+	}
+	.s-table tfoot .flbl{ text-align:right; }
+	.s-totals{
+		display:flex;
+		justify-content:flex-end;
+		margin-top:26px;
+	}
+	.s-totals .box{ width:300px; font-size:13px; }
+	.s-totals .trow{
+		display:flex;
+		justify-content:space-between;
+		padding:6px 12px;
+		font-variant-numeric:tabular-nums;
+	}
+	.s-totals .trow .k{ color:#5b675d; }
+	.s-totals .trow .v{ font-weight:600; }
+	.s-totals .trow.hst{
+		border-top:1px solid #cfdfd3;
+		margin-top:4px;
+		padding-top:9px;
+	}
+	.s-totals .trow.grand{
+		margin-top:8px;
+		background:#3a453b;
+		color:#fff;
+		border-radius:4px;
+		padding:10px 12px;
+		font-size:15px;
+		font-weight:800;
+	}
+	.s-totals .trow.grand .k, .s-totals .trow.grand .v{ color:#fff; font-weight:800; }
+	.s-footer{
+		margin-top:34px;
+		padding-top:14px;
+		border-top:1px solid #e0e8e1;
+		font-size:12px;
+		color:#5b675d;
+	}
+
+	/* ————— preview action bar ————— */
+	.preview-bar{
+		position:fixed;
+		left:0; right:0; bottom:0;
+		z-index:110;
+		background:rgba(24,32,24,.9);
+		backdrop-filter:blur(12px);
+		-webkit-backdrop-filter:blur(12px);
+		padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+		display:none;
+	}
+	.overlay.open ~ .preview-bar{ display:block; }
+	.preview-bar-inner{
+		max-width:640px;
+		margin:0 auto;
+		display:flex;
+		gap:10px;
+	}
+	.preview-bar .ghost-btn{
+		background:transparent;
+		color:#fff;
+		border-color:rgba(255,255,255,.4);
+	}
+	.preview-bar .primary-btn{ flex:1; }
+
+	/* ————— PRINT ————— */
+	@page{ size:letter; margin:0.45in; }
+	@media print{
+		body{ background:#fff; }
+		.app, .action-bar, .preview-bar{ display:none !important; }
+		.overlay{
+			display:block !important;
+			position:static;
+			background:#fff;
+			overflow:visible;
+		}
+		.sheet-wrap{ padding:0; }
+		.sheet-scale{ transform:none !important; height:auto !important; }
+		.sheet{
+			width:100%;
+			padding:0;
+			box-shadow:none;
+		}
+		.s-head, .s-table th, .s-table tfoot td, .s-totals .trow.grand{
+			-webkit-print-color-adjust:exact;
+			print-color-adjust:exact;
+		}
+	}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+	<header class="app-header">
+		<h1>New Invoice</h1>
+		<span class="sub">SS Greenline Inc</span>
+	</header>
+
+	<section class="card">
+		<h2>Invoice details</h2>
+		<div class="field">
+			<label for="invNum">Invoice number <span class="req">*</span></label>
+			<input type="text" id="invNum" inputmode="numeric" autocomplete="off" placeholder="e.g. 22426">
+			<div class="err-msg" id="invNumErr">Invoice number is required</div>
+		</div>
+		<div class="row-2">
+			<div class="field">
+				<label for="dateIssued">Date issued</label>
+				<input type="date" id="dateIssued">
+			</div>
+			<div class="field">
+				<label for="dueDays">Payment due in <span class="opt">(days, optional)</span></label>
+				<input type="text" id="dueDays" inputmode="numeric" autocomplete="off" placeholder="e.g. 30">
+			</div>
+		</div>
+	</section>
+
+	<section class="card">
+		<h2>Bill to</h2>
+		<div class="field">
+			<label for="btName">Name</label>
+			<input type="text" id="btName" autocomplete="off" value="SCG Electrical Inc">
+		</div>
+		<div class="field">
+			<label for="btAddr">Address</label>
+			<textarea id="btAddr" rows="2">474 Iroquois Shore Rd, Oakville, ON L6H 2Y7</textarea>
+		</div>
+		<div class="field">
+			<label for="btPhone">Phone</label>
+			<input type="text" id="btPhone" inputmode="tel" autocomplete="off" value="905-820-5500">
+		</div>
+	</section>
+
+	<section class="card">
+		<h2>Required materials</h2>
+		<div id="matRows"></div>
+		<button type="button" class="add-btn" id="addMat">+ Add material</button>
+		<div class="section-total"><span>Total material</span><b id="matTotal">$0.00</b></div>
+	</section>
+
+	<section class="card">
+		<h2>Labor</h2>
+		<div id="labRows"></div>
+		<button type="button" class="add-btn" id="addLab">+ Add labor</button>
+		<div class="section-total"><span>Total labor</span><b id="labTotal">$0.00</b></div>
+	</section>
+
+	<section class="card totals-card">
+		<h2>Totals</h2>
+		<div class="trow"><span>Total material</span><span id="sumMat">$0.00</span></div>
+		<div class="trow"><span>Total labor</span><span id="sumLab">$0.00</span></div>
+		<div class="trow"><span>Subtotal</span><span id="sumSub">$0.00</span></div>
+		<div class="trow"><span>HST (13%)</span><span id="sumHst">$0.00</span></div>
+		<div class="trow grand"><span>Total</span><span id="sumTotal">$0.00</span></div>
+	</section>
+</div>
+
+<div class="action-bar">
+	<div class="action-bar-inner">
+		<div class="live-total">
+			<div class="lbl">Total (incl. HST)</div>
+			<div class="amt" id="barTotal">$0.00</div>
+		</div>
+		<button type="button" class="primary-btn" id="previewBtn">Preview&nbsp;invoice</button>
+	</div>
+</div>
+
+<!-- ————— PREVIEW / PRINT SHEET ————— -->
+<div class="overlay" id="overlay">
+	<div class="sheet-wrap">
+		<div class="sheet-scale" id="sheetScale">
+			<div class="sheet" id="sheet">
+				<div class="s-head">
+					<div class="brand"><h1>SS GREENLINE INC</h1></div>
+					<div class="contact">
+						<div><div class="lbl">Phone</div>416-824-9667</div>
+						<div><div class="lbl">Address</div>25 Coakwell Dr,<br>Markham ON L6B 0L7</div>
+						<div><div class="lbl">Email</div>y.somas@gmail.com</div>
+						<div><div class="lbl">HST #</div>812293124 RT 0001</div>
+					</div>
+				</div>
+
+				<div class="s-meta">
+					<div class="col">
+						<h3>Invoice</h3>
+						<div class="kv"><span class="k">Invoice number</span><span class="v" id="sInvNum"></span></div>
+						<div class="kv"><span class="k">Date issued</span><span class="v" id="sDate"></span></div>
+						<div class="kv"><span class="k">Due date</span><span class="v" id="sDue"></span></div>
+					</div>
+					<div class="col">
+						<h3>Bill to</h3>
+						<div class="kv"><span class="k">Name</span><span class="v" id="sBtName"></span></div>
+						<div class="kv"><span class="k">Address</span><span class="v" id="sBtAddr"></span></div>
+						<div class="kv"><span class="k">Phone</span><span class="v" id="sBtPhone"></span></div>
+					</div>
+				</div>
+
+				<div id="sMatSection">
+					<div class="s-section-title">Required Materials</div>
+					<table class="s-table">
+						<colgroup><col style="width:12%"><col style="width:53%"><col style="width:16%"><col style="width:19%"></colgroup>
+						<thead><tr><th>Quantity</th><th>Description</th><th class="num" style="text-align:right">Unit Price</th><th class="num" style="text-align:right">Amount</th></tr></thead>
+						<tbody id="sMatBody"></tbody>
+						<tfoot><tr><td colspan="3" class="flbl">Total Material</td><td class="num" id="sMatTotal"></td></tr></tfoot>
+					</table>
+				</div>
+
+				<div id="sLabSection">
+					<div class="s-section-title">Labor</div>
+					<table class="s-table">
+						<colgroup><col style="width:24%"><col style="width:57%"><col style="width:19%"></colgroup>
+						<thead><tr><th>Date</th><th>Description</th><th class="num" style="text-align:right">Amount</th></tr></thead>
+						<tbody id="sLabBody"></tbody>
+						<tfoot><tr><td colspan="2" class="flbl">Total Labor</td><td class="num" id="sLabTotal"></td></tr></tfoot>
+					</table>
+				</div>
+
+				<div class="s-totals">
+					<div class="box">
+						<div class="trow"><span class="k">Subtotal</span><span class="v" id="sSub"></span></div>
+						<div class="trow hst"><span class="k">HST (13%)</span><span class="v" id="sHst"></span></div>
+						<div class="trow grand"><span class="k">TOTAL</span><span class="v" id="sTotal"></span></div>
+					</div>
+				</div>
+
+				<div class="s-footer" id="sTerms"></div>
+			</div>
+		</div>
+	</div>
+</div>
+
+<div class="preview-bar">
+	<div class="preview-bar-inner">
+		<button type="button" class="ghost-btn" id="editBtn">&larr; Edit</button>
+		<button type="button" class="primary-btn" id="printBtn">Print / Save PDF</button>
+	</div>
+</div>
+
+<template id="matRowTpl">
+	<div class="item-row" data-kind="mat">
+		<button type="button" class="remove" aria-label="Remove row">&times;</button>
+		<div class="field">
+			<label>Description</label>
+			<input type="text" class="f-desc" autocomplete="off" placeholder="e.g. 177 St George">
+		</div>
+		<div class="item-grid-3">
+			<div class="field">
+				<label>Qty <span class="opt">(opt.)</span></label>
+				<input type="text" class="f-qty" inputmode="decimal" autocomplete="off" placeholder="—">
+			</div>
+			<div class="field">
+				<label>Unit price <span class="opt">(opt.)</span></label>
+				<input type="text" class="f-price" inputmode="decimal" autocomplete="off" placeholder="—">
+			</div>
+			<div class="field">
+				<label>Amount</label>
+				<input type="text" class="f-amt" inputmode="decimal" autocomplete="off" placeholder="0.00">
+			</div>
+		</div>
+	</div>
+</template>
+
+<template id="labRowTpl">
+	<div class="item-row" data-kind="lab">
+		<button type="button" class="remove" aria-label="Remove row">&times;</button>
+		<div class="field">
+			<label>Description</label>
+			<input type="text" class="f-desc" autocomplete="off" placeholder="e.g. Electrical rough-in">
+		</div>
+		<div class="item-grid-2">
+			<div class="field">
+				<label>Date(s)</label>
+				<input type="text" class="f-date" autocomplete="off" placeholder="e.g. Aug 4 – Aug 8">
+			</div>
+			<div class="field">
+				<label>Amount</label>
+				<input type="text" class="f-amt" inputmode="decimal" autocomplete="off" placeholder="0.00">
+			</div>
+		</div>
+	</div>
+</template>
+
+<script>
+(function(){
+	"use strict";
+
+	var $ = function(id){ return document.getElementById(id); };
+	var fmt = new Intl.NumberFormat("en-CA", { minimumFractionDigits:2, maximumFractionDigits:2 });
+	var money = function(n){ return "$" + fmt.format(n); };
+
+	function parseNum(v){
+		if (v == null) return NaN;
+		var s = String(v).replace(/[$,\s]/g, "");
+		if (s === "") return NaN;
+		var n = Number(s);
+		return isFinite(n) ? n : NaN;
+	}
+
+	/* ————— default date = today ————— */
+	var today = new Date();
+	var pad = function(n){ return (n < 10 ? "0" : "") + n; };
+	$("dateIssued").value = today.getFullYear() + "-" + pad(today.getMonth()+1) + "-" + pad(today.getDate());
+
+	function longDate(iso){
+		if (!iso) return "";
+		var p = iso.split("-");
+		var d = new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+		return d.toLocaleDateString("en-CA", { year:"numeric", month:"long", day:"numeric" });
+	}
+
+	/* ————— rows ————— */
+	function addRow(kind){
+		var tpl = $(kind === "mat" ? "matRowTpl" : "labRowTpl");
+		var node = tpl.content.firstElementChild.cloneNode(true);
+		$(kind === "mat" ? "matRows" : "labRows").appendChild(node);
+		return node;
+	}
+	addRow("mat"); addRow("mat");
+	addRow("lab");
+
+	$("addMat").addEventListener("click", function(){ addRow("mat").querySelector(".f-desc").focus(); });
+	$("addLab").addEventListener("click", function(){ addRow("lab").querySelector(".f-desc").focus(); });
+
+	document.addEventListener("click", function(e){
+		var btn = e.target.closest(".remove");
+		if (!btn) return;
+		btn.closest(".item-row").remove();
+		recalc();
+	});
+
+	/* qty × unit price auto-fills amount */
+	document.addEventListener("input", function(e){
+		var row = e.target.closest(".item-row");
+		if (row && row.dataset.kind === "mat" &&
+			(e.target.classList.contains("f-qty") || e.target.classList.contains("f-price"))){
+			var q = parseNum(row.querySelector(".f-qty").value);
+			var p = parseNum(row.querySelector(".f-price").value);
+			if (!isNaN(q) && !isNaN(p)){
+				row.querySelector(".f-amt").value = (Math.round(q * p * 100) / 100).toFixed(2);
+			}
+		}
+		if (e.target.id === "invNum" && e.target.value.trim() !== ""){
+			e.target.classList.remove("invalid");
+			$("invNumErr").classList.remove("show");
+		}
+		recalc();
+	});
+
+	/* ————— totals ————— */
+	function rowsOf(kind){
+		return Array.prototype.slice.call(document.querySelectorAll('.item-row[data-kind="' + kind + '"]'));
+	}
+	function rowFilled(row){
+		return Array.prototype.some.call(row.querySelectorAll("input"), function(i){
+			return i.value.trim() !== "";
+		});
+	}
+	function sumRows(kind){
+		return rowsOf(kind).reduce(function(acc, row){
+			var n = parseNum(row.querySelector(".f-amt").value);
+			return acc + (isNaN(n) ? 0 : n);
+		}, 0);
+	}
+	function recalc(){
+		var mat = sumRows("mat");
+		var lab = sumRows("lab");
+		var sub = Math.round((mat + lab) * 100) / 100;
+		var hst = Math.round(sub * 13) / 100;
+		var total = Math.round((sub + hst) * 100) / 100;
+		$("matTotal").textContent = money(mat);
+		$("labTotal").textContent = money(lab);
+		$("sumMat").textContent = money(mat);
+		$("sumLab").textContent = money(lab);
+		$("sumSub").textContent = money(sub);
+		$("sumHst").textContent = money(hst);
+		$("sumTotal").textContent = money(total);
+		$("barTotal").textContent = money(total);
+		return { mat:mat, lab:lab, sub:sub, hst:hst, total:total };
+	}
+	recalc();
+
+	/* ————— sheet rendering ————— */
+	function esc(s){
+		return String(s).replace(/[&<>"]/g, function(c){
+			return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c];
+		});
+	}
+	function renderSheet(){
+		var t = recalc();
+
+		$("sInvNum").textContent = $("invNum").value.trim();
+		$("sDate").textContent = longDate($("dateIssued").value);
+
+		var days = parseNum($("dueDays").value);
+		if (!isNaN(days) && days > 0 && $("dateIssued").value){
+			var p = $("dateIssued").value.split("-");
+			var d = new Date(Number(p[0]), Number(p[1])-1, Number(p[2]));
+			d.setDate(d.getDate() + days);
+			$("sDue").textContent = d.toLocaleDateString("en-CA", { year:"numeric", month:"long", day:"numeric" });
+			$("sTerms").textContent = "Payment is due within " + days + " day" + (days === 1 ? "" : "s") + ".";
+		} else {
+			$("sDue").textContent = "—";
+			$("sTerms").textContent = "";
+		}
+
+		$("sBtName").textContent = $("btName").value.trim();
+		$("sBtAddr").textContent = $("btAddr").value.trim();
+		$("sBtPhone").textContent = $("btPhone").value.trim();
+
+		var matRows = rowsOf("mat").filter(rowFilled);
+		var matHtml = matRows.map(function(row){
+			var q = row.querySelector(".f-qty").value.trim();
+			var pr = parseNum(row.querySelector(".f-price").value);
+			var am = parseNum(row.querySelector(".f-amt").value);
+			return "<tr><td>" + esc(q) + "</td><td>" + esc(row.querySelector(".f-desc").value.trim()) +
+				"</td><td class='num'>" + (isNaN(pr) ? "" : money(pr)) +
+				"</td><td class='num'>" + (isNaN(am) ? "" : money(am)) + "</td></tr>";
+		}).join("");
+		$("sMatBody").innerHTML = matHtml;
+		$("sMatTotal").textContent = money(t.mat);
+		$("sMatSection").style.display = matRows.length ? "" : "none";
+
+		var labRows = rowsOf("lab").filter(rowFilled);
+		var labHtml = labRows.map(function(row){
+			var am = parseNum(row.querySelector(".f-amt").value);
+			return "<tr><td>" + esc(row.querySelector(".f-date").value.trim()) +
+				"</td><td>" + esc(row.querySelector(".f-desc").value.trim()) +
+				"</td><td class='num'>" + (isNaN(am) ? "" : money(am)) + "</td></tr>";
+		}).join("");
+		$("sLabBody").innerHTML = labHtml;
+		$("sLabTotal").textContent = money(t.lab);
+		$("sLabSection").style.display = labRows.length ? "" : "none";
+
+		$("sSub").textContent = money(t.sub);
+		$("sHst").textContent = money(t.hst);
+		$("sTotal").textContent = money(t.total);
+
+		var num = $("invNum").value.trim();
+		document.title = num ? "Invoice " + num : "SS Greenline — Invoice";
+	}
+
+	/* ————— preview overlay ————— */
+	function fitSheet(){
+		var scale = Math.min(1, (window.innerWidth - 24) / 780);
+		var scaler = $("sheetScale");
+		scaler.style.transform = "scale(" + scale + ")";
+		scaler.style.height = ($("sheet").offsetHeight * scale) + "px";
+	}
+	function openPreview(){
+		if ($("invNum").value.trim() === ""){
+			$("invNum").classList.add("invalid");
+			$("invNumErr").classList.add("show");
+			$("invNum").scrollIntoView({ behavior:"smooth", block:"center" });
+			$("invNum").focus({ preventScroll:true });
+			return;
+		}
+		renderSheet();
+		$("overlay").classList.add("open");
+		document.body.style.overflow = "hidden";
+		requestAnimationFrame(fitSheet);
+	}
+	function closePreview(){
+		$("overlay").classList.remove("open");
+		document.body.style.overflow = "";
+	}
+	$("previewBtn").addEventListener("click", openPreview);
+	$("editBtn").addEventListener("click", closePreview);
+	$("printBtn").addEventListener("click", function(){
+		renderSheet();
+		window.print();
+	});
+	window.addEventListener("resize", function(){
+		if ($("overlay").classList.contains("open")) fitSheet();
+	});
+	window.addEventListener("beforeprint", renderSheet);
+})();
+</script>
+</body>
+</html>
