@@ -408,6 +408,7 @@
 	/* ————— THE INVOICE SHEET ————— */
 	.sheet{
 		width:780px;
+		min-height:1010px; /* letter aspect at 780px wide — page size stays constant */
 		background:#fff;
 		color:#1c231d;
 		padding:44px 48px 56px;
@@ -587,6 +588,7 @@
 		.sheet-scale{ transform:none !important; height:auto !important; }
 		.sheet{
 			width:100%;
+			min-height:0;
 			padding:0;
 			box-shadow:none;
 		}
@@ -594,6 +596,15 @@
 			-webkit-print-color-adjust:exact;
 			print-color-adjust:exact;
 		}
+		/* compress vertical rhythm so the padded sheet always fits one page */
+		.s-head .brand{ padding:20px 26px; }
+		.s-head .contact{ padding:16px 26px; }
+		.s-meta{ margin:18px 2px 4px; }
+		.s-section-title{ margin:18px 0 8px; }
+		.s-table th, .s-table td{ padding:7px 10px; }
+		.s-totals{ margin-top:16px; }
+		.s-footer{ margin-top:18px; padding-top:10px; }
+		.s-table{ page-break-inside:avoid; }
 	}
 </style>
 </head>
@@ -999,10 +1010,12 @@
 		var row = e.target.closest(".item-row");
 		if (row && row.dataset.kind === "mat" &&
 			(e.target.classList.contains("f-qty") || e.target.classList.contains("f-price"))){
-			var q = parseNum(row.querySelector(".f-qty").value);
+			var qRaw = row.querySelector(".f-qty").value.trim();
+			var q = parseNum(qRaw);
 			var p = parseNum(row.querySelector(".f-price").value);
-			if (!isNaN(q) && !isNaN(p)){
-				row.querySelector(".f-amt").value = (Math.round(q * p * 100) / 100).toFixed(2);
+			if (!isNaN(p) && (qRaw === "" || !isNaN(q))){
+				var mult = qRaw === "" ? 1 : q;
+				row.querySelector(".f-amt").value = (Math.round(mult * p * 100) / 100).toFixed(2);
 			}
 		}
 		if (row && e.target.classList.contains("f-desc")) syncChips(row);
@@ -1088,6 +1101,8 @@
 		$("sBtAddr").textContent = $("btAddr").value.trim();
 		$("sBtPhone").textContent = $("btPhone").value.trim();
 
+		var MAT_MIN = 5, LAB_MIN = 3;
+
 		var matRows = rowsOf("mat").filter(rowFilled);
 		var matHtml = matRows.map(function(row){
 			var q = row.querySelector(".f-qty").value.trim();
@@ -1097,9 +1112,11 @@
 				"</td><td class='num'>" + (isNaN(pr) ? "" : money(pr)) +
 				"</td><td class='num'>" + (isNaN(am) ? "" : money(am)) + "</td></tr>";
 		}).join("");
+		for (var mi = matRows.length; mi < MAT_MIN; mi++){
+			matHtml += "<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>";
+		}
 		$("sMatBody").innerHTML = matHtml;
 		$("sMatTotal").textContent = money(t.mat);
-		$("sMatSection").style.display = matRows.length ? "" : "none";
 
 		var labRows = rowsOf("lab").filter(rowFilled);
 		var labHtml = labRows.map(function(row){
@@ -1108,9 +1125,11 @@
 				"</td><td>" + esc(row.querySelector(".f-desc").value.trim()) +
 				"</td><td class='num'>" + (isNaN(am) ? "" : money(am)) + "</td></tr>";
 		}).join("");
+		for (var li = labRows.length; li < LAB_MIN; li++){
+			labHtml += "<tr><td>&nbsp;</td><td></td><td></td></tr>";
+		}
 		$("sLabBody").innerHTML = labHtml;
 		$("sLabTotal").textContent = money(t.lab);
-		$("sLabSection").style.display = labRows.length ? "" : "none";
 
 		$("sSub").textContent = money(t.sub);
 		$("sHst").textContent = money(t.hst);
