@@ -985,6 +985,20 @@
 		}
 	});
 
+	/* leaving the target field with mismatched amounts already entered offers a re-split */
+	$("targetTotal").addEventListener("change", function(){
+		var pool = poolCents();
+		if (pool == null) return;
+		var parts = allRows().filter(rowFilled);
+		if (!parts.length) return;
+		var amounts = splitCents(pool, parts.length);
+		var matches = parts.every(function(r, i){
+			var v = parseNum(r.querySelector(".f-amt").value);
+			return !isNaN(v) && Math.round(v * 100) === amounts[i];
+		});
+		if (!matches) showSplitDialog(parts);
+	});
+
 	document.addEventListener("click", function(e){
 		var clearBtn = e.target.closest(".clear-row");
 		if (clearBtn){
