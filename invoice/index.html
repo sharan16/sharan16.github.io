@@ -333,6 +333,49 @@
 	.modal-btns{ display:flex; gap:10px; }
 	.modal-btns .primary-btn{ flex:1; }
 
+	/* ————— loaders ————— */
+	.boot-loader{
+		position:fixed;
+		inset:0;
+		z-index:300;
+		background:var(--mint-soft);
+		display:flex;
+		flex-direction:column;
+		align-items:center;
+		justify-content:center;
+		gap:14px;
+		transition:opacity .25s ease;
+	}
+	.boot-loader.hide{ opacity:0; pointer-events:none; }
+	.spinner{
+		width:30px;
+		height:30px;
+		border-radius:50%;
+		border:3px solid var(--line);
+		border-top-color:var(--green);
+		animation:spin .8s linear infinite;
+	}
+	@keyframes spin{ to{ transform:rotate(360deg); } }
+	.boot-text{
+		font-size:13px;
+		font-weight:600;
+		color:var(--ink-soft);
+		letter-spacing:.02em;
+	}
+	.btn-spinner{
+		display:inline-block;
+		width:16px;
+		height:16px;
+		border-radius:50%;
+		border:2.5px solid rgba(255,255,255,.35);
+		border-top-color:#fff;
+		animation:spin .8s linear infinite;
+		vertical-align:-3px;
+		margin-right:8px;
+	}
+	.primary-btn:disabled{ opacity:.75; }
+	@media print{ .boot-loader{ display:none !important; } }
+
 	/* ————— sticky action bar ————— */
 	.action-bar{
 		position:fixed;
@@ -609,6 +652,11 @@
 </style>
 </head>
 <body>
+
+<div class="boot-loader" id="bootLoader">
+	<div class="spinner"></div>
+	<div class="boot-text">Loading your last invoice&hellip;</div>
+</div>
 
 <div class="app" id="app">
 	<header class="app-header">
@@ -1181,10 +1229,23 @@
 	}
 	$("previewBtn").addEventListener("click", openPreview);
 	$("editBtn").addEventListener("click", closePreview);
+	var printing = false;
 	$("printBtn").addEventListener("click", function(){
+		if (printing) return;
+		printing = true;
 		renderSheet();
-		saveSession();
-		window.print();
+		var btn = $("printBtn");
+		var orig = btn.innerHTML;
+		btn.disabled = true;
+		btn.innerHTML = '<span class="btn-spinner"></span>Saving&hellip;';
+		var minShow = new Promise(function(res){ setTimeout(res, 450); });
+		var timeout = new Promise(function(res){ setTimeout(res, 3000); });
+		Promise.all([ Promise.race([saveSession(), timeout]), minShow ]).then(function(){
+			btn.innerHTML = orig;
+			btn.disabled = false;
+			printing = false;
+			window.print();
+		});
 	});
 
 	/* ————— session sync (JSONBin): load on open, save on print ————— */
@@ -1250,6 +1311,14 @@
 		recalc();
 	}
 
+	var bootStart = Date.now();
+	function hideBoot(){
+		var wait = Math.max(0, 500 - (Date.now() - bootStart));
+		setTimeout(function(){
+			$("bootLoader").classList.add("hide");
+			setTimeout(function(){ $("bootLoader").style.display = "none"; }, 300);
+		}, wait);
+	}
 	fetch(BIN_URL + "/latest", { headers: { "X-Master-Key": BIN_KEY } })
 		.then(function(r){ return r.json(); })
 		.then(function(d){
@@ -1261,13 +1330,14 @@
 				$("invNum").dispatchEvent(new Event("input", { bubbles:true }));
 			}
 		})
-		.catch(function(){ /* offline — dad fills everything himself */ });
+		.catch(function(){ /* offline — dad fills everything himself */ })
+		.then(hideBoot);
 
 	function saveSession(){
 		var n = parseInt($("invNum").value.replace(/\D/g, ""), 10);
 		var body = { saved: collectState() };
 		if (!isNaN(n)) body.next = n + 1;
-		fetch(BIN_URL, {
+		return fetch(BIN_URL, {
 			method: "PUT",
 			headers: { "Content-Type": "application/json", "X-Master-Key": BIN_KEY },
 			body: JSON.stringify(body)
