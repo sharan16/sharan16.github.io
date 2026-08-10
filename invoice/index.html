@@ -1015,7 +1015,7 @@
 		$("splitModal").classList.remove("open");
 	});
 
-	$("targetTotal").addEventListener("input", function(){
+	function refreshTarget(){
 		var pool = poolCents();
 		var hint = $("targetHint");
 		if (pool != null){
@@ -1033,7 +1033,8 @@
 		} else {
 			hint.classList.remove("show");
 		}
-	});
+	}
+	$("targetTotal").addEventListener("input", refreshTarget);
 
 	/* leaving the target field with mismatched amounts already entered offers a re-split */
 	$("targetTotal").addEventListener("change", function(){
@@ -1303,11 +1304,7 @@
 				row.querySelector(".f-amt").value = l.amt || "";
 			});
 		}
-		var pool = poolCents();
-		if (pool != null){
-			$("targetHint").textContent = "= " + money(pool / 100) + " before HST — items will split from this";
-			$("targetHint").classList.add("show");
-		}
+		refreshTarget();
 		recalc();
 	}
 
