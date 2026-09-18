@@ -11,7 +11,7 @@
   if(preview){const mem={};storage={getItem:k=>mem[k],setItem:(k,v)=>mem[k]=v};const banner=document.createElement('div');banner.className='preview';banner.textContent='Preview — changes stay in this tab';document.querySelector('header').after(banner);}
   const store=BodyStore.create({storage,config:preview?null:BODY_SYNC,fetcher:fetch.bind(window),onChange:data=>{
     state=data;if(ready){render(true);if(selected)renderSkill();}
-  },onSync:(text,kind)=>{$('#sync-message').textContent=preview?'Preview mode. Your real progress is unchanged.':text;$('#save-label').textContent=kind==='synced'?'Synced':kind==='pending'?'Saving…':kind==='error'?'Saved locally':'Saved';$('#save-dot').className=kind;$('#sync-open').title=text;}});
+  },onSync:(text,kind)=>{$('#sync-message').textContent=preview?'Preview mode. Your real progress is unchanged.':text;$('#save-label').textContent=kind==='synced'?'Synced':kind==='pending'?'Saving…':kind==='error'?'Check sync':'Saved';$('#save-dot').className=kind;$('#sync-open').title=text;}});
   state=store.get();
   const status=id=>state.skills[id]?.status||'unmarked';
   const stats=ns=>({done:ns.filter(n=>status(n.id)==='achieved').length,working:ns.filter(n=>status(n.id)==='working').length});
