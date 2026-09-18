@@ -1,121 +1,112 @@
 (() => {
   'use strict';
-  const paths=window.BODY_PATHS, all=paths.flatMap(p=>p.stages.flat());
-  const byId=new Map(all.map(n=>[n.id,n])), groups=['Pull','Push','Core','Legs','Mobility'];
-  const $=s=>document.querySelector(s), main=$('#main');
-  const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  let state=BodyStore.empty(), group='All', query='', pathMode='focus', atlasMode='overview', earlier=false, activeSkill=null, activePath=null, map=null, toastTimer, lastOp=null;
-  let ready=false, syncState='Loading your progress…';
-  let localStorageSafe;
-  try{localStorageSafe=window.localStorage;}catch{localStorageSafe={getItem:()=>null,setItem:()=>{throw new Error('Storage unavailable');}};}
-  const store=BodyStore.create({storage:localStorageSafe,config:window.BODY_SYNC,fetcher:window.fetch.bind(window),onChange:data=>{state=data;if(ready){render(true);if(activeSkill)renderSkill();}},onSync:(text,kind)=>{
-    syncState=text;$('#sync-message').textContent=text;$('#sync-dot').className='sync-dot '+kind;
-    $('#sync-short').textContent=kind==='synced'?'Synced':kind==='pending'?'Saving…':kind==='error'?'Check sync':'On device';
-    $('#sync-button').title=text;
-  }});
-  state=store.get();
-  const status=id=>state.skills[id]?.status || 'unmarked';
+  const paths=BODY_PATHS, groups=['Pull','Push','Core','Legs','Mobility'];
+  const all=paths.flatMap(p=>p.stages.flat()), byId=new Map(all.map(n=>[n.id,n]));
+  const $=s=>document.querySelector(s), esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const labels={unmarked:'Unmarked',working:'Working on',achieved:'Can do'};
-  const marks={unmarked:'○',working:'◉',achieved:'✓'};
-  const nodes=p=>p.stages.flat();
-  const counts=p=>{const ns=p?nodes(p):all;return{achieved:ns.filter(n=>status(n.id)==='achieved').length,working:ns.filter(n=>status(n.id)==='working').length,total:ns.length};};
-  const following=p=>state.paths[p.id]?.following ?? nodes(p).some(n=>status(n.id)!=='unmarked');
-  function current(p){const working=nodes(p).filter(n=>status(n.id)==='working');if(working.length)return working.map(n=>n.name).join(' · ');const achieved=nodes(p).filter(n=>status(n.id)==='achieved');return achieved.length?'Can do · '+achieved[achieved.length-1].name:'Choose your starting point';}
-  const legend=()=>'<div class="legend"><span><i class="achieved"></i>Can do</span><span><i class="working"></i>Working on</span><span><i></i>Unmarked</span></div>';
-  function mini(p){return '<div class="mini-track" aria-hidden="true">'+p.stages.map(st=>'<div class="mini-stage">'+st.map(n=>'<i class="mini-dot '+status(n.id)+'"></i>').join('')+'</div>').join('')+'</div>';}
-  function stats(){const c=counts();return `<div class="hero-count"><div><b>${c.achieved}</b><span>can do</span></div><div><b>${c.working}</b><span>working on</span></div><div><b>${paths.filter(following).length}<span> / ${paths.length}</span></b><span>paths followed</span></div><div class="total-stat"><b>${c.total}</b><span>variations to explore</span></div></div>`;}
-  function card(p){const c=counts(p);return `<button class="path-card" data-path="${p.id}"><span class="card-top"><span class="category">${p.group}</span><span class="card-arrow" aria-hidden="true">↗</span></span><h3>${p.name}</h3><span class="card-current ${c.working?'has-current':''}">${escape(current(p))}</span>${mini(p)}<span class="card-bottom"><span>${c.achieved} of ${c.total} can do</span><span class="${following(p)?'tracked':''}">${following(p)?'Following ✓':p.stages.length+' stages'}</span></span></button>`;}
-  function renderPaths(){const tracked=paths.filter(following);main.innerHTML=`<section class="hero"><div><span class="eyebrow">YOUR PERSONAL PROGRESSION ATLAS</span><h1>Find your footing.<br><span class="hero-accent">See what’s next.</span></h1><p>One place for where you are, and where you could go.</p></div>${stats()}</section>${tracked.length?`<section><div class="section-heading"><h2>Your paths <span class="muted">/ ${tracked.length}</span></h2><a href="#atlas" class="text-button">See the bigger picture ↗</a></div><div class="cards">${tracked.map(card).join('')}</div></section>`:`<section class="welcome"><div><h3>Your atlas starts with one skill.</h3><p>Open a path below. Tap a variation and mark it “Can do” or “Working on.” There’s no test, no workout log, and no need to start at the beginning.</p></div><span class="welcome-number" aria-hidden="true">01</span></section>`}<section id="library"><div class="section-heading"><h2>Explore paths</h2><span class="muted">${paths.length} paths · no locked levels</span></div><div class="library-tools"><div class="filters" aria-label="Filter paths">${['All',...groups].map(g=>`<button class="chip" data-group="${g}" aria-pressed="${group===g}">${g}</button>`).join('')}</div><label class="search"><input id="search" type="search" placeholder="Find a path or exercise…" aria-label="Find a path or exercise" value="${escape(query)}"></label></div><div class="cards" id="library-cards"></div></section>`;renderLibrary();}
-  function renderLibrary(){const match=paths.filter(p=>(group==='All'||p.group===group)&&[p.name,...nodes(p).map(n=>n.name)].join(' ').toLowerCase().includes(query.toLowerCase()));$('#library-cards').innerHTML=match.length?match.map(card).join(''):'<div class="empty-results">No matching paths. Try a different exercise or category.</div>';}
-  function route(){const hash=location.hash.slice(1);return hash.startsWith('path/')?{view:'path',id:hash.slice(5)}:{view:hash==='atlas'?'atlas':'paths'};}
-  function focusStage(p){const work=p.stages.findIndex(s=>s.some(n=>status(n.id)==='working'));if(work>=0)return work;let last=-1;p.stages.forEach((s,i)=>{if(s.some(n=>status(n.id)==='achieved'))last=i;});return Math.min(last+1,p.stages.length-1);}
-  function exercise(n){return `<button class="exercise ${status(n.id)}" data-skill="${n.id}"><span class="status-circle ${status(n.id)}">${marks[status(n.id)]}</span><span><strong>${n.name}</strong><small>${labels[status(n.id)]}</small></span><span class="arrow" aria-hidden="true">↗</span></button>`;}
-  function renderPath(p){activePath=p;const c=counts(p);main.innerHTML=`<a class="back" href="#paths">← All paths</a><section class="path-heading"><div><span class="eyebrow">${p.group.toUpperCase()} / ${p.stages.length} STAGES</span><h1>${p.name}</h1><p>${p.description}</p><div class="path-meta"><span>${p.equipment}</span><span>${c.achieved} can do · ${c.working} working on</span></div></div><button class="secondary" id="follow-path" aria-pressed="${following(p)}">${following(p)?'Following ✓':'Follow this path +'}</button></section><div class="view-bar"><div class="segmented" aria-label="Path view"><button data-path-mode="focus" aria-pressed="${pathMode==='focus'}">Next steps</button><button data-path-mode="map" aria-pressed="${pathMode==='map'}">Full path ↗</button></div>${legend()}</div><div id="path-content"></div>`;
-    if(pathMode==='map'){mountMap($('#path-content'),[p]);return;}
-    const at=focusStage(p), start=earlier?0:Math.max(0,at-1), end=Math.min(p.stages.length,at+3);
-    $('#path-content').innerHTML=`<div class="focus-layout"><div class="focus-main">${start?`<button class="earlier" id="show-earlier">↑ Show ${start} earlier ${start===1?'stage':'stages'}</button>`:''}${p.stages.slice(start,end).map((stage,j)=>{const i=start+j;let label=i===at?'Your next step':i===at+1?'Then':i>at+1?'Further ahead':'Earlier';if(stage.some(n=>status(n.id)==='working'))label='You are here';else if(stage.every(n=>status(n.id)==='achieved'))label='Can do';return `<div class="stage"><span class="stage-number">${String(i+1).padStart(2,'0')}</span><div class="stage-label">${label}${stage.length>1?' · choose a variation':''}</div>${stage.map(exercise).join('')}</div>`;}).join('')}${end<p.stages.length?`<button class="text-button" data-path-mode="map">See all ${p.stages.length} stages in the full path ↗</button>`:'<p class="end-note">This is the end of this route, not the end of your progress.</p>'}</div><aside class="aside-note"><span class="eyebrow">ONE STEP AT A TIME</span><h3>A route, not a rulebook.</h3><p>Tap any variation to set your position. Stages with two variations offer alternatives; you don’t need to complete both.</p><p>Earlier skills stay unmarked until you mark them yourself.</p><span class="eyebrow">RELATED PATHS</span>${p.related.map(id=>{const rel=paths.find(x=>x.id===id);return `<a class="related-link" href="#path/${id}">${rel.name}<span>↗</span></a>`;}).join('')}</aside></div>`;
-  }
-  function renderAtlas(){const c=counts();main.innerHTML=`<section class="hero"><div><span class="eyebrow">THE BIGGER PICTURE</span><h1>Every little step.<br><span class="hero-accent">All in one place.</span></h1><p>Your marks across the atlas. A record of skills, not a fitness score.</p></div>${stats()}</section><div class="atlas-summary">${groups.map(g=>{const ns=paths.filter(p=>p.group===g).flatMap(nodes),done=ns.filter(n=>status(n.id)==='achieved').length,working=ns.filter(n=>status(n.id)==='working').length;return `<div class="group-summary"><span class="category">${g}</span><span class="count">${done} <small>/ ${ns.length} can do</small></span><div class="progress-track" aria-label="${g}: ${done} can do, ${working} working on"><span class="done" style="width:${done/ns.length*100}%"></span><span class="doing" style="width:${working/ns.length*100}%"></span></div></div>`;}).join('')}</div><div class="view-bar"><div class="segmented" aria-label="Atlas view"><button data-atlas-mode="overview" aria-pressed="${atlasMode==='overview'}">Overview</button><button data-atlas-mode="map" aria-pressed="${atlasMode==='map'}">All skills map ↗</button></div>${legend()}</div><div id="atlas-content"></div>`;
-    if(atlasMode==='map')mountMap($('#atlas-content'),paths);
-    else $('#atlas-content').innerHTML=`<div class="overview-list">${paths.map(p=>{const x=counts(p);return `<button class="overview-row" data-path="${p.id}"><div><h3>${p.name}</h3><small>${x.working?x.working+' working on':p.group}</small></div>${mini(p)}<span class="fraction">${x.achieved}/${x.total}</span><span aria-hidden="true">↗</span></button>`;}).join('')}</div><p class="fine" style="margin-top:20px">${c.achieved} of ${c.total} variations explicitly marked “Can do.” Alternative variations count separately; completing every variation is not the goal.</p>`;
+  const symbols={unmarked:'',working:'◉',achieved:'✓'};
+  let state=BodyStore.empty(), ready=false, selected=null, pose=0, camera=null, toastTimer;
+  const preview=new URLSearchParams(location.search).get('preview')==='1';
+  let storage;try{storage=localStorage;}catch{storage={getItem:()=>null,setItem:()=>{throw Error('Storage unavailable');}};}
+  if(preview){const mem={};storage={getItem:k=>mem[k],setItem:(k,v)=>mem[k]=v};const banner=document.createElement('div');banner.className='preview';banner.textContent='Preview — changes stay in this tab';document.querySelector('header').after(banner);}
+  const store=BodyStore.create({storage,config:preview?null:BODY_SYNC,fetcher:fetch.bind(window),onChange:data=>{
+    state=data;if(ready){render(true);if(selected)renderSkill();}
+  },onSync:(text,kind)=>{$('#sync-message').textContent=preview?'Preview mode. Your real progress is unchanged.':text;$('#save-label').textContent=kind==='synced'?'Synced':kind==='pending'?'Saving…':kind==='error'?'Saved locally':'Saved';$('#save-dot').className=kind;$('#sync-open').title=text;}});
+  state=store.get();
+  const status=id=>state.skills[id]?.status||'unmarked';
+  const stats=ns=>({done:ns.filter(n=>status(n.id)==='achieved').length,working:ns.filter(n=>status(n.id)==='working').length});
+  function route(){const parts=location.hash.slice(1).split('/');if(parts[0]==='path'){const p=paths.find(p=>p.id===parts[1]);if(p)return{type:'path',path:p};}if(parts[0]==='group'){const g=groups.find(g=>g.toLowerCase()===parts[1]);if(g)return{type:'group',group:g};}return{type:'all'};}
+  const groupUrl=g=>'#group/'+g.toLowerCase();
+  function node({id,name,x,y,kind='skill',detail='',value='',href=''}){
+    const st=kind==='skill'?status(id):kind;
+    return `<button class="node ${st}" ${kind==='skill'?`data-skill="${id}"`:`data-go="${href}"`} style="left:${x}px;top:${y}px" aria-label="${esc(name)}, ${kind==='skill'?labels[st]:esc(detail)}"><span class="orb">${kind==='skill'?(symbols[st]||value):value}</span><strong>${esc(name)}</strong>${detail||kind==='skill'&&st!=='unmarked'?`<small>${esc(detail||(labels[st]))}</small>`:''}</button>`;
   }
   function render(preserve=false){
-    const scroll=window.scrollY, oldMap=preserve&&map?{key:map.key,x:map.x,y:map.y,scale:map.scale,expanded:map.expanded}:null;
-    const searchFocused=document.activeElement?.id==='search';
-    if(map){map.destroy();map=null;}
-    const r=route();activePath=null;
-    $('#nav-paths').setAttribute('aria-current',r.view==='atlas'?'false':'page');$('#nav-atlas').setAttribute('aria-current',r.view==='atlas'?'page':'false');
-    if(r.view==='path'){const p=paths.find(p=>p.id===r.id);if(p)renderPath(p);else{location.hash='paths';return;}}
-    else if(r.view==='atlas')renderAtlas();else renderPaths();
-    document.title=(activePath?activePath.name:r.view==='atlas'?'Atlas':'Your paths')+' — Body';
-    if(oldMap&&map?.key===oldMap.key){if(oldMap.expanded)map.expand();Object.assign(map,oldMap);map.apply();}
-    if(preserve){window.scrollTo(0,scroll);if(searchFocused)$('#search')?.focus();}
-  }
-  function renderSkill(){const n=byId.get(activeSkill);if(!n)return;const p=paths.find(p=>nodes(p).some(x=>x.id===n.id));const s=status(n.id);$('#skill-dialog').innerHTML=`<div class="sheet-top"><span class="eyebrow">${p.group.toUpperCase()} / STAGE ${n.stage+1}</span><button class="icon-button" data-close aria-label="Close exercise">×</button></div><div class="skill-route">${p.name} <span>→</span> ${p.stages[n.stage].length>1?'Alternative variation':'Progression'}</div><h2 id="skill-title">${n.name}</h2><div class="skill-cue"><h3>What it looks like</h3><p>${n.cue}</p></div><span class="eyebrow">WHERE ARE YOU WITH THIS?</span><div class="status-options">${['unmarked','working','achieved'].map(st=>`<button class="status-option" data-status="${st}" aria-pressed="${s===st}"><span class="status-circle ${st}">${marks[st]}</span>${labels[st]}${st===s?'<span class="selected-check">✓</span>':''}</button>`).join('')}</div><p class="fine">Only this variation changes. Your other skills keep their own status.</p><button class="primary wide" data-close>Done</button>${route().view!=='path'?`<button class="text-button wide" data-open-path="${p.id}">Explore the ${p.name.toLowerCase()} path ↗</button>`:''}`;}
-  function openSkill(id){if(!byId.has(id))return;activeSkill=id;renderSkill();$('#skill-dialog').showModal();}
-  function toast(message,undo=false){clearTimeout(toastTimer);$('#toast').innerHTML=`<span>${escape(message)}</span>${undo?'<button id="undo">Undo</button>':''}`;$('#toast').hidden=false;toastTimer=setTimeout(()=>{$('#toast').hidden=true;lastOp=null;},6500);}
-  function mountMap(host,mapPaths){
-    host.innerHTML=`<div class="map-shell"><div class="map-viewport" role="region" aria-label="${mapPaths.length===1?'Full progression path':'All progression paths'}; drag to pan or use zoom controls" tabindex="0"><div class="map-world"></div><button class="map-expand" data-zoom="expand" aria-label="Expand map" aria-pressed="false">Expand ⤢</button><div class="map-controls" aria-label="Map controls"><button data-zoom="out" aria-label="Zoom out">−</button><span class="map-scale">100%</span><button data-zoom="in" aria-label="Zoom in">+</button><button class="fit" data-zoom="fit">Fit all</button><button class="fit" data-zoom="position">My position</button></div></div><div class="map-caption"><span>Downward = suggested progression · forks = alternatives</span><span>Drag to explore · pinch to zoom</span></div></div>`;
-    if(mapPaths.length>1){const jump=document.createElement('select');jump.className='map-jump';jump.setAttribute('aria-label','Jump to a path on the map');jump.innerHTML='<option value="">Jump to a path…</option>'+mapPaths.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');host.querySelector('.map-viewport').appendChild(jump);jump.addEventListener('change',()=>{const pi=mapPaths.findIndex(p=>p.id===jump.value);if(pi<0)return;const pathHeight=160+(mapPaths[pi].stages.length-1)*124+40;map.scale=Math.min(1,(viewport.clientWidth-35)/480,(viewport.clientHeight-135)/pathHeight);map.x=viewport.clientWidth/2-((pi%4)*500+240)*map.scale;map.y=75-Math.floor(pi/4)*1150*map.scale;map.apply();});}
-    const viewport=host.querySelector('.map-viewport'),world=host.querySelector('.map-world');
-    const atlas=mapPaths.length>1, cols=atlas?4:1, colW=500,rowH=1150;let positions=[],edges=[],titles=[],alternative=[];
-    mapPaths.forEach((p,pi)=>{const ox=(pi%cols)*colW,oy=Math.floor(pi/cols)*rowH;let prev=[];
-      titles.push(`<button class="map-title" data-path="${p.id}" style="left:${ox+20}px;top:${oy+12}px">${p.name}<small>${p.group.toUpperCase()} · ${counts(p).achieved}/${nodes(p).length} CAN DO</small></button>`);
-      p.stages.forEach((stage,i)=>{const y=oy+100+i*124, current=[];
-        if(stage.length>1)alternative.push(`<div class="map-alternative" style="left:${ox+20}px;top:${y-23}px">ALTERNATIVE VARIATIONS</div>`);
-        stage.forEach((n,j)=>{const x=ox+(stage.length===1?140:30+j*230);const pt={n,x,y,path:p};positions.push(pt);current.push(pt);prev.forEach(pr=>edges.push(`<path class="map-edge ${status(pr.n.id)==='achieved'&&status(n.id)==='achieved'?'completed':''}" d="M${pr.x+100} ${pr.y+72} C${pr.x+100} ${pr.y+96},${x+100} ${y-28},${x+100} ${y}"/>`));});prev=current;
+    const r=route(),key=r.type==='path'?r.path.id:r.type==='group'?r.group:'all';
+    const old=preserve&&camera?.key===key?{x:camera.x,y:camera.y,scale:camera.scale}:null;
+    if(camera)camera.destroy();
+    let buttons=[],edges=[],forks=[],width=400,height,focusY=0;
+    if(r.type==='path'){
+      const p=r.path,c=stats(p.stages.flat());
+      $('#context').innerHTML=`<a class="crumb" href="${groupUrl(p.group)}">← ${p.group} branches</a><select class="path-select" id="path-picker" aria-label="Choose a skill path">${groups.map(g=>`<optgroup label="${g}">${paths.filter(p=>p.group===g).map(q=>`<option value="${q.id}" ${q.id===p.id?'selected':''}>${q.name}</option>`).join('')}</optgroup>`).join('')}</select><p><span class="path-stats">${c.done} can do${c.working?' · '+c.working+' working on':''}</span> · Tap a skill to see it</p>`;
+      let previous=[];p.stages.forEach((stage,i)=>{
+        const y=28+i*155,current=[];
+        if(stage.length>1)forks.push(`<div class="fork-label" style="left:110px;top:${y-25}px">Choose either variation</div>`);
+        stage.forEach((n,j)=>{const x=stage.length===1?110:10+j*200;buttons.push(node({id:n.id,name:n.name,x,y,value:String(i+1)}));current.push({n,x,y});previous.forEach(pr=>edges.push(`<path class="edge ${status(pr.n.id)==='achieved'&&status(n.id)==='achieved'?'done':''}" d="M ${pr.x+90} ${pr.y+108} C ${pr.x+90} ${pr.y+128}, ${x+90} ${y-35}, ${x+90} ${y-8}"/>`));});previous=current;
       });
-    });
-    const width=atlas?cols*colW:480,height=atlas?Math.ceil(mapPaths.length/cols)*rowH-100:160+(mapPaths[0].stages.length-1)*124+40;
-    world.style.width=width+'px';world.style.height=height+'px';
-    world.innerHTML=`<svg width="${width}" height="${height}" aria-hidden="true">${edges.join('')}</svg>${titles.join('')}${alternative.join('')}${positions.map(({n,x,y})=>`<button class="map-node ${status(n.id)}" style="left:${x}px;top:${y}px" data-skill="${n.id}" aria-label="${n.name}, ${labels[status(n.id)]}"><span class="status-circle ${status(n.id)}">${marks[status(n.id)]}</span><span><strong>${n.name}</strong><small>${labels[status(n.id)]}</small></span></button>`).join('')}`;
-    const controller={key:mapPaths.map(p=>p.id).join(','),x:0,y:0,scale:1,apply(){world.style.transform=`translate(${this.x}px,${this.y}px) scale(${this.scale})`;host.querySelector('.map-scale').textContent=Math.round(this.scale*100)+'%';},fit(){this.scale=Math.min(1,(viewport.clientWidth-42)/width,(viewport.clientHeight-100)/height);this.x=(viewport.clientWidth-width*this.scale)/2;this.y=Math.max(20,(viewport.clientHeight-height*this.scale)/2-20);this.apply();},zoom(f,cx=viewport.clientWidth/2,cy=viewport.clientHeight/2){const next=Math.min(1.8,Math.max(.045,this.scale*f));this.x=cx-(cx-this.x)*next/this.scale;this.y=cy-(cy-this.y)*next/this.scale;this.scale=next;this.apply();},position(){const target=positions.find(p=>status(p.n.id)==='working')||positions.filter(p=>status(p.n.id)==='achieved').at(-1)||positions[0];this.scale=Math.min(1.15,(viewport.clientWidth-40)/240);this.x=viewport.clientWidth/2-(target.x+100)*this.scale;this.y=viewport.clientHeight*.4-(target.y+36)*this.scale;this.apply();},destroy(){resize.disconnect();}};
-    controller.expanded=false;
-    controller.expand=function(){this.expanded=!this.expanded;host.querySelector('.map-shell').classList.toggle('expanded',this.expanded);document.body.classList.toggle('map-expanded',this.expanded);const btn=host.querySelector('.map-expand');btn.textContent=this.expanded?'Close ×':'Expand ⤢';btn.setAttribute('aria-label',this.expanded?'Close expanded map':'Expand map');btn.setAttribute('aria-pressed',this.expanded);this.fit();};
-    const baseDestroy=controller.destroy;controller.destroy=()=>{baseDestroy();document.body.classList.remove('map-expanded');};
-    map=controller;
-    let pointers=new Map(), moved=false, distance=0, midpoint=null;
-    viewport.addEventListener('pointerdown',e=>{if(e.target.closest('.map-controls,.map-expand,.map-jump'))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});moved=false;if(pointers.size===2){const ps=[...pointers.values()];distance=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y);midpoint={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};}viewport.setPointerCapture(e.pointerId);});
-    viewport.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);const dx=e.clientX-prev.x,dy=e.clientY-prev.y;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(Math.abs(dx)+Math.abs(dy)>2)moved=true;if(pointers.size===2){const ps=[...pointers.values()],d=Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y),mid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2},rect=viewport.getBoundingClientRect();if(distance)controller.zoom(d/distance,mid.x-rect.left,mid.y-rect.top);if(midpoint){controller.x+=mid.x-midpoint.x;controller.y+=mid.y-midpoint.y;}distance=d;midpoint=mid;moved=true;}else{controller.x+=dx;controller.y+=dy;}viewport.classList.add('dragging');controller.apply();});
-    // Pointer capture is only for gestures; preserve a tap's original node target.
-    let downTarget=null;viewport.addEventListener('pointerdown',e=>{downTarget=e.target.closest('[data-skill],[data-path]');});
-    viewport.addEventListener('pointerup',e=>{pointers.delete(e.pointerId);if(!pointers.size){viewport.classList.remove('dragging');if(!moved&&downTarget){if(downTarget.dataset.skill)openSkill(downTarget.dataset.skill);else location.hash='path/'+downTarget.dataset.path;}downTarget=null;}distance=0;midpoint=null;});
-    viewport.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);moved=true;downTarget=null;viewport.classList.remove('dragging');});
-    viewport.addEventListener('click',e=>{if(e.target.closest('.map-node,.map-title')&&e.detail!==0){e.stopPropagation();e.preventDefault();}},true);
-    viewport.addEventListener('wheel',e=>{e.preventDefault();const r=viewport.getBoundingClientRect();controller.zoom(Math.exp(-e.deltaY*.002),e.clientX-r.left,e.clientY-r.top);},{passive:false});
-    viewport.addEventListener('keydown',e=>{if(e.target!==viewport)return;if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','+','=','-','0'].includes(e.key)){e.preventDefault();if(e.key==='+'||e.key==='=')controller.zoom(1.2);else if(e.key==='-')controller.zoom(1/1.2);else if(e.key==='0')controller.fit();else{controller.x+=e.key==='ArrowLeft'?50:e.key==='ArrowRight'?-50:0;controller.y+=e.key==='ArrowUp'?50:e.key==='ArrowDown'?-50:0;controller.apply();}}});
-    world.addEventListener('focusin',e=>{const id=e.target.dataset.skill,pt=positions.find(p=>p.n.id===id);if(!pt)return;const r=e.target.getBoundingClientRect(),vr=viewport.getBoundingClientRect();if(r.left<vr.left||r.right>vr.right||r.top<vr.top||r.bottom>vr.bottom){controller.x=viewport.clientWidth/2-(pt.x+100)*controller.scale;controller.y=viewport.clientHeight/2-(pt.y+36)*controller.scale;controller.apply();}});
-    let w=viewport.clientWidth;const resize=new ResizeObserver(()=>{if(viewport.clientWidth!==w){w=viewport.clientWidth;controller.fit();}});resize.observe(viewport);controller.fit();
+      height=p.stages.length*155+20;
+      const working=p.stages.findIndex(s=>s.some(n=>status(n.id)==='working'));
+      const achieved=p.stages.map((s,i)=>s.some(n=>status(n.id)==='achieved')?i:-1).filter(i=>i>=0);
+      focusY=Math.max(0,(working>=0?working:achieved.length?Math.min(achieved.at(-1)+1,p.stages.length-1):0)-1)*155;
+      $('#map-hint').textContent='Drag to explore · pinch to zoom';
+    }else{
+      const subset=r.type==='group'?paths.filter(p=>p.group===r.group):paths;
+      const c=stats(subset.flatMap(p=>p.stages.flat()));
+      $('#context').innerHTML=`${r.type==='group'?'<a class="crumb" href="#all">← All skills</a>':''}<h1>${r.type==='all'?'Your skill tree':r.group+' skills'}</h1><p>${c.done} can do${c.working?' · '+c.working+' working on':''} · ${r.type==='all'?'Choose a branch to begin':'Choose a skill to explore'}</p>`;
+      const branches=r.type==='all'?groups.map(g=>({id:g,name:g,href:groupUrl(g),items:paths.filter(p=>p.group===g).flatMap(p=>p.stages.flat()),value:{Pull:'↟',Push:'↑',Core:'◎',Legs:'↥',Mobility:'∿'}[g]})):subset.map(p=>({id:p.id,name:p.name,href:'#path/'+p.id,items:p.stages.flat(),value:stats(p.stages.flat()).done?'✓':'○'}));
+      const wide=$('#tree').clientWidth>=760,cols=wide?Math.min(branches.length,r.type==='all'?5:4):2;
+      width=cols*200;
+      buttons.push(node({id:'root',name:r.type==='all'?'Your skills':r.group,kind:'root',x:width/2-90,y:20,value:r.type==='all'?'b.':'↟',href:'#all'}));
+      height=(wide?180:140)+Math.ceil(branches.length/cols)*(wide?155:130);
+      if(!wide)edges.push(`<path class="edge" d="M200 128 V${140+Math.floor((branches.length-1)/2)*130+28}"/>`);
+      branches.forEach((b,i)=>{const y=(wide?180:140)+Math.floor(i/cols)*(wide?155:130),x=(i%cols)*200+10,c=stats(b.items);buttons.push(node({id:b.id,name:b.name,x,y,kind:'branch',detail:c.done+' / '+b.items.length+' can do',value:b.value,href:b.href}));edges.push(wide?`<path class="edge" d="M${width/2} 128 V${y-30} H${x+90} V${y-8}"/>`:`<path class="edge" d="M200 ${y+28} H${i%2===0?x+125:x+55}"/>`);});
+      $('#map-hint').textContent=r.type==='all'?'Your progress lives on these branches':'Tap a branch to open its tree';
+    }
+    $('#world').style.width=width+'px';$('#world').style.height=height+'px';
+    $('#world').innerHTML=`<svg width="${width}" height="${height}" aria-hidden="true">${edges.join('')}</svg>${forks.join('')}${buttons.join('')}`;
+    document.title=(r.type==='path'?r.path.name:r.type==='group'?r.group:'Skill tree')+' — Body';
+    camera=setupCamera(key,width,height,focusY,r.type==='all');
+    if(old){Object.assign(camera,old);camera.apply();}
   }
-  document.addEventListener('click',e=>{
-    const b=e.target.closest('button');if(!b)return;
-    if(b.dataset.path){location.hash='path/'+b.dataset.path;}
-    else if(b.dataset.skill){openSkill(b.dataset.skill);}
-    else if(b.dataset.group){group=b.dataset.group;document.querySelectorAll('[data-group]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.group===group));renderLibrary();}
-    else if(b.dataset.pathMode){pathMode=b.dataset.pathMode;render(true);}
-    else if(b.dataset.atlasMode){atlasMode=b.dataset.atlasMode;render(true);}
-    else if(b.dataset.status){const id=activeSkill;lastOp={id,status:status(id)};store.setSkill(id,b.dataset.status);toast(labels[b.dataset.status]+' · '+byId.get(id).name,true);$('#skill-dialog').querySelector(`[data-status="${b.dataset.status}"]`).focus();}
-    else if(b.hasAttribute('data-close')){b.closest('dialog').close();}
-    else if(b.dataset.openPath){$('#skill-dialog').close();location.hash='path/'+b.dataset.openPath;}
-    else if(b.dataset.zoom&&map){if(b.dataset.zoom==='expand')map.expand();else if(b.dataset.zoom==='fit')map.fit();else if(b.dataset.zoom==='position')map.position();else map.zoom(b.dataset.zoom==='in'?1.3:1/1.3);}
-    else if(b.id==='follow-path')store.setPath(activePath.id,!following(activePath));
-    else if(b.id==='show-earlier'){earlier=true;render(true);}
-    else if(b.id==='undo'&&lastOp){const op=lastOp;lastOp=null;store.setSkill(op.id,op.status);toast('Change undone');}
-    else if(b.id==='sync-button')$('#settings-dialog').showModal();
-    else if(b.id==='retry-sync')store.sync();
-    else if(b.id==='about-button')$('#about-dialog').showModal();
-    else if(b.id==='export'){const blob=new Blob([store.export()],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='body-progress-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+  function setupCamera(key,width,height,focusY,fitInitially){
+    const viewport=$('#tree'),world=$('#world'),abort=new AbortController();
+    const on=(type,fn,opts={})=>viewport.addEventListener(type,fn,{signal:abort.signal,...opts});
+    const c={key,x:0,y:0,scale:1,apply(){world.style.transform=`translate(${this.x}px,${this.y}px) scale(${this.scale})`;},fit(){this.scale=Math.max(.2,Math.min(1,(viewport.clientWidth-24)/width,(viewport.clientHeight-100)/height));this.x=(viewport.clientWidth-width*this.scale)/2;this.y=20;this.apply();},zoom(f,cx=viewport.clientWidth/2,cy=viewport.clientHeight/2){const s=Math.min(1.7,Math.max(.2,this.scale*f));this.x=cx-(cx-this.x)*s/this.scale;this.y=cy-(cy-this.y)*s/this.scale;this.scale=s;this.apply();},destroy(){abort.abort();observer.disconnect();}};
+    c.scale=Math.min(1,(viewport.clientWidth-24)/width);c.x=(viewport.clientWidth-width*c.scale)/2;c.y=22-focusY*c.scale;if(fitInitially)c.fit();else c.apply();
+    const pointers=new Map();let start=null,down=null,moved=false,lastDistance=0,lastMid=null;
+    on('pointerdown',e=>{if(e.target.closest('.map-tools'))return;if(pointers.size===0){start={x:e.clientX,y:e.clientY};moved=false;down=e.target.closest('.node');}pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size>1){moved=true;down=null;const p=[...pointers.values()];lastDistance=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y);lastMid={x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2};}viewport.setPointerCapture(e.pointerId);});
+    on('pointermove',e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(start&&Math.hypot(e.clientX-start.x,e.clientY-start.y)>5)moved=true;
+      if(pointers.size===2){const p=[...pointers.values()],dist=Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y),mid={x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2},r=viewport.getBoundingClientRect();if(lastDistance)c.zoom(dist/lastDistance,mid.x-r.left,mid.y-r.top);if(lastMid){c.x+=mid.x-lastMid.x;c.y+=mid.y-lastMid.y;}lastDistance=dist;lastMid=mid;}else if(moved){c.x+=e.clientX-prev.x;c.y+=e.clientY-prev.y;}if(moved)viewport.classList.add('dragging');c.apply();});
+    on('pointerup',e=>{if(!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);if(!pointers.size){viewport.classList.remove('dragging');if(!moved&&down)activateNode(down);down=null;start=null;}lastDistance=0;lastMid=null;});
+    on('pointercancel',e=>{pointers.delete(e.pointerId);down=null;moved=true;viewport.classList.remove('dragging');});
+    on('click',e=>{if(e.target.closest('.node')&&e.detail!==0){e.stopPropagation();e.preventDefault();}},{capture:true});
+    on('wheel',e=>{e.preventDefault();if(e.ctrlKey||e.metaKey){const r=viewport.getBoundingClientRect();c.zoom(Math.exp(-e.deltaY*.008),e.clientX-r.left,e.clientY-r.top);}else{c.x-=e.deltaX;c.y-=e.deltaY;c.apply();}},{passive:false});
+    on('keydown',e=>{if(e.target!==viewport)return;const dirs={ArrowLeft:[35,0],ArrowRight:[-35,0],ArrowUp:[0,35],ArrowDown:[0,-35]};if(dirs[e.key]){e.preventDefault();c.x+=dirs[e.key][0];c.y+=dirs[e.key][1];c.apply();}else if(['+','=','-','0'].includes(e.key)){e.preventDefault();if(e.key==='0')c.fit();else c.zoom(e.key==='-'?1/1.25:1.25);}});
+    on('focusin',e=>{if(!e.target.matches('.node'))return;const a=e.target.getBoundingClientRect(),b=viewport.getBoundingClientRect();if(a.top<b.top||a.bottom>b.bottom||a.left<b.left||a.right>b.right){c.x+=b.left+b.width/2-(a.left+a.width/2);c.y+=b.top+b.height/2-(a.top+a.height/2);c.apply();}});
+    let previousWidth=viewport.clientWidth;const observer=new ResizeObserver(()=>{if(previousWidth!==viewport.clientWidth){const crossed=(previousWidth>=760)!==(viewport.clientWidth>=760);previousWidth=viewport.clientWidth;if(crossed&&route().type!=='path'){render();return;}c.fit();}});observer.observe(viewport);return c;
+  }
+  function activateNode(button){if(button.dataset.skill)openSkill(button.dataset.skill);else if(button.dataset.go)location.hash=button.dataset.go;}
+  function mediaFor(n,p){const exact=BODY_MEDIA.matches[n.id],key=exact||BODY_MEDIA.related?.[n.id]||BODY_MEDIA.references[p.id];return {asset:BODY_MEDIA.assets[key],exact:!!exact};}
+  function mediaHTML(n,p){const {asset:a,exact}=mediaFor(n,p);if(!a)return '';
+    pose=Math.min(pose,a.frames.length-1);const f=a.frames[pose];
+    return `<figure class="visual"><button class="visual-image ${a.kind==='photo'?'photo':''}" id="enlarge-image" aria-label="Enlarge ${esc(a.name)} image"><img id="exercise-image" src="${f.src}" alt="${esc(a.name)} — ${esc(f.label)}" width="512" height="512"></button>${a.frames.length>1?`<div class="pose-controls" aria-label="Exercise poses">${a.frames.map((f,i)=>`<button data-pose="${i}" aria-pressed="${pose===i}">Pose ${i+1}</button>`).join('')}</div>`:''}<figcaption class="visual-caption"><strong>${exact?(a.kind==='photo'?'Photo reference':'Exercise illustration'):'Related reference · '+esc(a.name)}</strong>${!exact?`<span class="reference-note">This shows ${esc(a.name.toLowerCase())}, not the exact ${esc(n.name.toLowerCase())} variation.</span>`:''}</figcaption></figure>`;
+  }
+  function renderSkill(){const n=byId.get(selected);if(!n)return;const p=paths.find(p=>p.stages.flat().some(x=>x.id===n.id));const {asset:a}=mediaFor(n,p),s=status(n.id);
+    $('#skill').innerHTML=`<div class="sheet-heading"><div><div class="eyebrow">${p.name} · Stage ${n.stage+1}</div><h2 id="skill-title">${n.name}</h2></div><button class="close" data-close aria-label="Close exercise">×</button></div>${mediaHTML(n,p)}<p class="cue">${n.cue}</p><a class="video-link" href="https://www.youtube.com/results?search_query=${encodeURIComponent(n.name+' calisthenics tutorial')}" target="_blank" rel="noreferrer">Find a video of this variation ↗</a>${a?`<details class="source"><summary>Image source · ${esc(a.provider)}</summary><p>${esc(a.name)} — ${esc(a.author)}. <a href="${a.source}" target="_blank" rel="noreferrer">Original</a> · <a href="${a.licenseUrl}" target="_blank" rel="noreferrer">${esc(a.license)}</a>. ${a.kind==='illustration'?'AI-generated illustration supplied by RepDB.':'Photograph displayed unmodified.'}</p></details>`:''}<div class="status-bar"><div class="status-label">Your progress</div><div class="status-buttons">${Object.entries(labels).map(([k,v])=>`<button data-status="${k}" aria-pressed="${s===k}">${v}${s===k?' ✓':''}</button>`).join('')}</div></div>`;
+    $('#exercise-image')?.addEventListener('error',()=>{const frame=$('#enlarge-image');frame.disabled=true;frame.className='image-failed';frame.textContent='Image unavailable offline. The description and video link are still available.';});
+  }
+  function openSkill(id){if(!byId.has(id))return;selected=id;pose=0;renderSkill();$('#skill').showModal();$('#skill').scrollTop=0;}
+  function showToast(text){clearTimeout(toastTimer);$('#toast').textContent=text;$('#toast').hidden=false;toastTimer=setTimeout(()=>$('#toast').hidden=true,2500);}
+  document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+    if(b.matches('.node'))activateNode(b);
+    else if(b.dataset.map){if(b.dataset.map==='fit')camera.fit();else camera.zoom(b.dataset.map==='in'?1.25:1/1.25);}
+    else if(b.hasAttribute('data-close'))b.closest('dialog').close();
+    else if(b.dataset.status){store.setSkill(selected,b.dataset.status);$('#skill').querySelector(`[data-status="${b.dataset.status}"]`)?.focus({preventScroll:true});}
+    else if(b.dataset.pose!==undefined){pose=Number(b.dataset.pose);const scroll=$('#skill').scrollTop;renderSkill();$('#skill').scrollTop=scroll;$('#skill').querySelector(`[data-pose="${pose}"]`).focus({preventScroll:true});}
+    else if(b.id==='enlarge-image'){const img=$('#exercise-image');$('#large-image').src=img.src;$('#large-image').alt=img.alt;$('#large-caption').textContent=img.alt;$('#image-view').showModal();}
+    else if(b.id==='sync-open')$('#settings').showModal();
+    else if(b.id==='sync-now')store.sync();
+    else if(b.id==='export'){const url=URL.createObjectURL(new Blob([store.export()],{type:'application/json'})),a=document.createElement('a');a.href=url;a.download='body-progress-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
     else if(b.id==='import')$('#import-file').click();
   });
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&map?.expanded&&!document.querySelector('dialog[open]'))map.expand();});
-  document.addEventListener('input',e=>{if(e.target.id==='search'){query=e.target.value;renderLibrary();}});
-  $('#import-file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>1000000)throw new Error('This backup is too large.');store.importData(JSON.parse(await f.text()));$('#import-result').textContent='Backup merged. Your progress is saved on this device.';}catch(err){$('#import-result').textContent='Could not import: '+err.message;}e.target.value='';});
-  document.querySelectorAll('dialog').forEach(d=>{d.addEventListener('click',e=>{if(e.target===d){const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();}});});
-  $('#skill-dialog').addEventListener('close',()=>{activeSkill=null;});
-  window.addEventListener('hashchange',()=>{pathMode='focus';earlier=false;render();window.scrollTo(0,0);});
+  document.addEventListener('change',e=>{if(e.target.id==='path-picker')location.hash='path/'+e.target.value;});
+  $('#import-file').addEventListener('change',async e=>{const f=e.target.files[0];if(!f)return;try{if(f.size>1000000)throw Error('Backup is too large.');store.importData(JSON.parse(await f.text()));$('#import-result').textContent='Backup merged.';}catch(err){$('#import-result').textContent='Could not import: '+err.message;}e.target.value='';});
+  document.querySelectorAll('dialog').forEach(d=>{d.addEventListener('click',e=>{if(e.target!==d)return;const r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close();});});
+  $('#skill').addEventListener('close',()=>{const id=selected;selected=null;document.querySelector(`[data-skill="${id}"]`)?.focus({preventScroll:true});});
+  window.addEventListener('hashchange',()=>{if($('#skill').open)$('#skill').close();render();});
   window.addEventListener('online',()=>store.sync());
-  window.addEventListener('storage',e=>{if(e.key==='body-progress-v1'&&e.newValue){store.acceptLocal(e.newValue);store.sync();}});
+  window.addEventListener('storage',e=>{if(!preview&&e.key==='body-progress-v1'&&e.newValue){store.acceptLocal(e.newValue);store.sync();}});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)store.sync();});
   ready=true;render();store.sync();
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  if('serviceWorker' in navigator&&!preview)navigator.serviceWorker.register('./sw.js').catch(()=>{});
 })();
