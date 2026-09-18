@@ -12,6 +12,9 @@ on:
 jobs:
   build:
 
+    permissions:
+      contents: write
+
     runs-on: ubuntu-latest
 
     strategy:
@@ -29,6 +32,7 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
+    - run: node --test tests/body.test.cjs
     - name: Deploy with gh-pages
       run: |
         git remote set-url origin https://git:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git

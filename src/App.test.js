@@ -5,6 +5,12 @@ import App from './App';
 
 // Mock window.scrollTo
 window.scrollTo = jest.fn();
+window.matchMedia = query => ({
+  matches: query === '(prefers-reduced-motion: reduce)',
+  media: query,
+  addEventListener: jest.fn(),
+  removeEventListener: jest.fn(),
+});
 
 test('renders homepage content', () => {
   render(
@@ -13,12 +19,6 @@ test('renders homepage content', () => {
     </Router>
   );
   
-  // Look for content that actually exists in your App component
-  const titleElement = screen.getByText(/Welcome!/i);
-  expect(titleElement).toBeInTheDocument();
-
-  const subtitleElement = screen.getByText(/Hello, I'm Shan Somas/i);
-  expect(subtitleElement).toBeInTheDocument();
-
-  // You can add more assertions here to test for other elements
+  expect(screen.getByRole('heading', { level: 1, name: /Storage systems by day/i })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'PRODUCTS' })).toHaveAttribute('href', '#products');
 });
